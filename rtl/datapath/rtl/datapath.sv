@@ -36,6 +36,7 @@ module datapath
     input logic             en_translation_i,
     input logic             en_ld_st_translation_i,
     input debug_in_t        debug_i,
+    input debug_in_t        debug_i_2,
     input [1:0]             csr_priv_lvl_i,
     input logic             req_icache_ready_i,
     input sew_t             sew_i,
@@ -84,6 +85,7 @@ module datapath
     
     // Decode
     id_ir_stage_t decoded_instr;
+     id_ir_stage_t decoded_instr_2;
     id_ir_stage_t stored_instr_id_d;
     id_ir_stage_t stored_instr_id_q;
     id_ir_stage_t selection_id_ir_1;
@@ -95,6 +97,7 @@ module datapath
     
     // Rename and free list
     id_ir_stage_t stage_iq_ir_q_1;
+    id_ir_stage_t stage_iq_ir_q_2;
     id_ir_stage_t stage_ir_rr_d;
     ir_rr_stage_t stage_ir_rr_q;
     ir_rr_stage_t stage_stall_rr_q;
@@ -248,6 +251,7 @@ module datapath
     
     //gl_instruction_t instruction_gl_commit_old_q;
     gl_instruction_t [1:0] instruction_to_commit;
+    gl_instruction_t [1:0] instruction_to_commit_2;
     logic src_select_commit;
     exception_t exception_mem_commit_int;
     gl_index_t mem_gl_index_int;
@@ -523,12 +527,14 @@ assign free_list_read_src1_int_2 = (debug_i_2.reg_read_valid  && debug_i_2.halt_
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
         .recover_checkpoint_i   (cu_ir_int.recover_checkpoint),
         .commit_roll_back_i     (cu_ir_int.recover_commit),
-        .new_register_o         (free_register_to_rename),
+        .new_register_1_o         (free_register_to_rename),
+        .new_register_2_o         (free_register_to_rename),
         .checkpoint_o           (checkpoint_free_list),
         .out_of_checkpoints_o   (out_of_checkpoints_free_list),
         .empty_o                (free_list_empty)
     );
 
+    //Todo: fp_free_list
     fp_free_list fp_free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
