@@ -86,7 +86,7 @@ module datapath
     id_ir_stage_t decoded_instr;
     id_ir_stage_t stored_instr_id_d;
     id_ir_stage_t stored_instr_id_q;
-    id_ir_stage_t selection_id_ir;
+    id_ir_stage_t selection_id_ir_1;
 
     id_cu_t id_cu_int;
     jal_id_if_t jal_id_if_int;
@@ -94,7 +94,7 @@ module datapath
     logic src_select_id_ir_q;
     
     // Rename and free list
-    id_ir_stage_t stage_iq_ir_q;
+    id_ir_stage_t stage_iq_ir_q_1;
     id_ir_stage_t stage_ir_rr_d;
     ir_rr_stage_t stage_ir_rr_q;
     ir_rr_stage_t stage_stall_rr_q;
@@ -136,7 +136,7 @@ module datapath
     ir_cu_t ir_cu_int;
     cu_ir_t cu_ir_int;
 
-    reg_t free_list_read_src1_int;
+    reg_t free_list_read_src1_int_1;
 
     // Read Registers
     rr_exe_instr_t stage_rr_exe_d;
@@ -456,9 +456,17 @@ module datapath
     //////// INSTRUCTION QUEUE, FREE LIST AND RENAME               STAGE                                  /////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-assign stored_instr_id_d = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
-assign free_list_read_src1_int = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_iq_ir_q.instr.rs1;
+//Todo: I'm using the same control signals for both,
+// it could be that the second instruction needs a control signal of its own.
+
+assign stored_instr_id_d_1 = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
+assign free_list_read_src1_int_1 = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_iq_ir_q_1.instr.rs1;
 assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
+
+assign stored_instr_id_d_2 = (src_select_id_ir_q) ? decoded_instr_2 : stored_instr_id_q_2;
+assign free_list_read_src1_int_2 = (debug_i_2.reg_read_valid  && debug_i_2.halt_valid)  ? debug_i_2.reg_read_write_addr : stage_iq_ir_q_2.instr.rs1;
+
+
 
     // Register ID to IR when stall
     register #($bits(id_ir_stage_t)) reg_id_inst(
@@ -470,21 +478,33 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .output_o(stored_instr_id_q)
     );
 
+    register #($bits(id_ir_stage_t)) reg_id_inst_2(
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .flush_i(flush_int.flush_id),
+        .load_i(1'b1),
+        .input_i(stored_instr_id_d_2),
+        .output_o(stored_instr_id_q_2)
+    );
+
     // Syncronus Mux to decide between actual decode or one cycle before
     always @(posedge clk_i) begin
         src_select_id_ir_q <= !control_int.stall_id;
     end
 
-    assign selection_id_ir = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
 
+    assign selection_id_ir_1 = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
+    assign selection_id_ir_2 = (src_select_id_ir_q) ? decoded_instr : stored_instr_id_q;
     // Instruction Queue 
     instruction_queue instruction_queue_inst(
         .clk_i          (clk_i),
         .rstn_i         (rstn_i),  
         .flush_i        (flush_int.flush_ir),  
-        .instruction_i  (selection_id_ir), 
+        .instruction_1_i  (selection_id_ir_1), 
+        .instruction_2_i  (selection_id_ir_2), 
         .read_head_i    (~control_int.stall_iq),
-        .instruction_o  (stage_iq_ir_q),
+        .instruction_1_o  (stage_iq_ir_q_1),
+        .instruction_2_o  (stage_iq_ir_q_2),
         .full_o         (ir_cu_int.full_iq),
         .empty_o        ()
     );
@@ -493,9 +513,11 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     free_list free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
-        .read_head_i            (stage_iq_ir_q.instr.regfile_we & stage_iq_ir_q.instr.valid & (stage_iq_ir_q.instr.rd != 'h0) & (~control_int.stall_ir) & (~control_int.stall_iq)),
+        .read_head_1_i            (stage_iq_ir_q_1.instr.regfile_we & stage_iq_ir_q_1.instr.valid & (stage_iq_ir_q_1.instr.rd != 'h0) & (~control_int.stall_ir) & (~control_int.stall_iq)),
+        .read_head_2_i            (stage_iq_ir_q_2.instr.regfile_we & stage_iq_ir_q_2.instr.valid & (stage_iq_ir_q_2.instr.rd != 'h0) & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .add_free_register_i    (cu_ir_int.enable_commit_update),
-        .free_register_i        ({instruction_to_commit[1].old_prd, instruction_to_commit[0].old_prd}),
+        .free_register_1_i        ({instruction_to_commit[1].old_prd, instruction_to_commit[0].old_prd}),
+        .free_register_2_i        ({instruction_to_commit_2[1].old_prd, instruction_to_commit_2[0].old_prd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
@@ -510,7 +532,7 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     fp_free_list fp_free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
-        .read_head_i            (stage_iq_ir_q.instr.fregfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
+        .read_head_i            (stage_iq_ir_q_1.instr.fregfile_we & stage_iq_ir_q_1.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .add_free_register_i    (cu_ir_int.fp_enable_commit_update),
         .free_register_i        ({instruction_to_commit[1].old_fprd, instruction_to_commit[0].old_fprd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
@@ -528,13 +550,13 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     rename_table rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i( free_list_read_src1_int ),
-        .read_src2_i(stage_iq_ir_q.instr.rs2),
-        .old_dst_i(stage_iq_ir_q.instr.rd),
-        .write_dst_i(stage_iq_ir_q.instr.regfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
+        .read_src1_i( free_list_read_src1_int_1 ),
+        .read_src2_i(stage_iq_ir_q_1.instr.rs2),
+        .old_dst_i(stage_iq_ir_q_1.instr.rd),
+        .write_dst_i(stage_iq_ir_q_1.instr.regfile_we & stage_iq_ir_q_1.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(free_register_to_rename),
-        .use_rs1_i(stage_iq_ir_q.instr.use_rs1 | (debug_i.reg_read_valid  && debug_i.halt_valid)),
-        .use_rs2_i(stage_iq_ir_q.instr.use_rs2),
+        .use_rs1_i(stage_iq_ir_q_1.instr.use_rs1 | (debug_i.reg_read_valid  && debug_i.halt_valid)),
+        .use_rs2_i(stage_iq_ir_q_1.instr.use_rs2),
         .ready_i(cu_rr_int.write_enable),
         .vaddr_i(write_vaddr),
         .paddr_i(write_paddr_rr),
@@ -559,15 +581,15 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     fp_rename_table fp_rename_table_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
-        .read_src1_i(stage_iq_ir_q.instr.rs1),
-        .read_src2_i(stage_iq_ir_q.instr.rs2),
-        .read_src3_i(stage_iq_ir_q.instr.rs3),
-        .old_dst_i(stage_iq_ir_q.instr.rd),
-        .write_dst_i(stage_iq_ir_q.instr.fregfile_we & stage_iq_ir_q.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
+        .read_src1_i(stage_iq_ir_q_1.instr.rs1),
+        .read_src2_i(stage_iq_ir_q_1.instr.rs2),
+        .read_src3_i(stage_iq_ir_q_1.instr.rs3),
+        .old_dst_i(stage_iq_ir_q_1.instr.rd),
+        .write_dst_i(stage_iq_ir_q_1.instr.fregfile_we & stage_iq_ir_q_1.instr.valid & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .new_dst_i(fp_free_register_to_rename),
-        .use_fs1_i(stage_iq_ir_q.instr.use_fs1),
-        .use_fs2_i(stage_iq_ir_q.instr.use_fs2),
-        .use_fs3_i(stage_iq_ir_q.instr.use_fs3),
+        .use_fs1_i(stage_iq_ir_q_1.instr.use_fs1),
+        .use_fs2_i(stage_iq_ir_q_1.instr.use_fs2),
+        .use_fs3_i(stage_iq_ir_q_1.instr.use_fs3),
         .ready_i(cu_rr_int.fwrite_enable),
         .vaddr_i(fp_write_vaddr), // WB
         .paddr_i(fp_write_paddr_rr), // WB
@@ -601,20 +623,20 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
     assign stage_no_stall_rr_q.chkp = checkpoint_rename;
 
     // Signals for Control Unit
-    assign ir_cu_int.valid                   = stage_iq_ir_q.instr.valid;
+    assign ir_cu_int.valid                   = stage_iq_ir_q_1.instr.valid;
     assign ir_cu_int.empty_free_list         = free_list_empty;
     assign ir_cu_int.out_of_checkpoints      = out_of_checkpoints_rename;
     assign ir_cu_int.fp_out_of_checkpoints   = fp_out_of_checkpoints_rename;
-    assign ir_cu_int.is_branch               = (stage_iq_ir_q.instr.instr_type == BLT)  ||
-                                               (stage_iq_ir_q.instr.instr_type == BLTU) ||
-                                               (stage_iq_ir_q.instr.instr_type == BGE)  ||
-                                               (stage_iq_ir_q.instr.instr_type == BGEU) ||
-                                               (stage_iq_ir_q.instr.instr_type == BEQ)  ||
-                                               (stage_iq_ir_q.instr.instr_type == BNE)  ||
-                                               (stage_iq_ir_q.instr.instr_type == JALR);
+    assign ir_cu_int.is_branch               = (stage_iq_ir_q_1.instr.instr_type == BLT)  ||
+                                               (stage_iq_ir_q_1.instr.instr_type == BLTU) ||
+                                               (stage_iq_ir_q_1.instr.instr_type == BGE)  ||
+                                               (stage_iq_ir_q_1.instr.instr_type == BGEU) ||
+                                               (stage_iq_ir_q_1.instr.instr_type == BEQ)  ||
+                                               (stage_iq_ir_q_1.instr.instr_type == BNE)  ||
+                                               (stage_iq_ir_q_1.instr.instr_type == JALR);
     always_comb begin
-        stage_ir_rr_d = stage_iq_ir_q;
-        stage_ir_rr_d.instr.valid = stage_iq_ir_q.instr.valid & (~control_int.stall_iq); 
+        stage_ir_rr_d = stage_iq_ir_q_1;
+        stage_ir_rr_d.instr.valid = stage_iq_ir_q_1.instr.valid & (~control_int.stall_iq); 
     end 
     // Register IR to RR
     register #($bits(id_ir_stage_t) + $bits(phreg_t) + $bits(phreg_t) + $bits(logic)) reg_ir_inst(
@@ -1286,8 +1308,8 @@ assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
         .id_stall(control_int.stall_id),
         .id_flush(flush_int.flush_id),
 
-        .ir_valid(stage_iq_ir_q.instr.valid),
-        .ir_id(stage_iq_ir_q.instr.id),
+        .ir_valid(stage_iq_ir_q_1.instr.valid),
+        .ir_id(stage_iq_ir_q_1.instr.id),
         .ir_stall(control_int.stall_ir),
         .ir_flush(flush_int.flush_ir),
 
