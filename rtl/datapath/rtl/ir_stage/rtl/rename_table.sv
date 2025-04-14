@@ -25,23 +25,23 @@ module rename_table
     input wire                        clk_i,               // Clock Singal
     input wire                        rstn_i,              // Negated Reset Signal
 
-    input reg_t                       read_src1_i,         // Read source register 1 mapping
-    input reg_t                       read_src2_i,         // Read source register 2 mapping
-    input reg_t                       old_dst_i,           // Read and write to old destination register
-    input logic                       write_dst_i,         // Needs to write to old destination register
-    input phreg_t                     new_dst_i,           // Wich register write to old destination register
+    input reg_t [NUM_SCALAR_INSTR-1:0]                 read_src1_i,         // Read source register 1 mapping
+    input reg_t [NUM_SCALAR_INSTR-1:0]                 read_src2_i,         // Read source register 2 mapping
+    input reg_t [NUM_SCALAR_INSTR-1:0]                 old_dst_i,           // Read and write to old destination register
+    input logic [NUM_SCALAR_INSTR-1:0]                 write_dst_i,         // Needs to write to old destination register
+    input phreg_t [NUM_SCALAR_INSTR-1:0]               new_dst_i,           // Wich register write to old destination register
 
-    input logic                       use_rs1_i,           // Instruction uses source register 1
-    input logic                       use_rs2_i,           // Instruction uses source register 2
+    input logic [NUM_SCALAR_INSTR-1:0]                  use_rs1_i,           // Instruction uses source register 1
+    input logic [NUM_SCALAR_INSTR-1:0]                 use_rs2_i,           // Instruction uses source register 2
 
     input logic   [NUM_SCALAR_WB-1:0] ready_i,             // New register is ready
     input reg_t   [NUM_SCALAR_WB-1:0] vaddr_i,             // New register is ready
     input phreg_t [NUM_SCALAR_WB-1:0] paddr_i,             // New register is ready
 
     input logic                       recover_commit_i,    // Copy commit table on register table
-    input reg_t [1:0]                 commit_old_dst_i,    // Read and write to old destination register at commit table
-    input logic [1:0]                 commit_write_dst_i,  // Needs to write to old destination register at commit table
-    input phreg_t [1:0]               commit_new_dst_i,    // Wich register write to old destination register at commit table
+    input reg_t [(NUM_SCALAR_INSTR*2)-1:0]                 commit_old_dst_i,    // Read and write to old destination register at commit table
+    input logic [(NUM_SCALAR_INSTR*2)-1:0]                 commit_write_dst_i,  // Needs to write to old destination register at commit table
+    input phreg_t [(NUM_SCALAR_INSTR*2)-1:0]               commit_new_dst_i,    // Wich register write to old destination register at commit table
 
     input wire                        do_checkpoint_i,     // After renaming do a checkpoint
     input wire                        do_recover_i,        // Recover a checkpoint
@@ -66,31 +66,42 @@ checkpoint_ptr version_tail_q, version_tail_d;
 //Num must be 1 bit bigger than checkpoint pointer
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints_q, num_checkpoints_d;
 
-logic write_enable;
-logic read_enable;
-logic checkpoint_enable;
-logic commit_write_enable_0;
-logic commit_write_enable_1;
+logic [NUM_SCALAR_INSTR-1:0] write_enable;
+logic [NUM_SCALAR_INSTR-1:0] read_enable;
+logic [NUM_SCALAR_INSTR-1:0] checkpoint_enable;
+logic [NUM_SCALAR_INSTR-1:0] commit_write_enable_0;
+logic [NUM_SCALAR_INSTR-1:0] commit_write_enable_1;
 logic [NUM_SCALAR_WB-1:0] ready_enable;
 logic [NUM_SCALAR_WB-1:0] rdy1;
 logic [NUM_SCALAR_WB-1:0] rdy2;
 
 // User can do checkpoints when there is at least one free copy of the free list
-assign checkpoint_enable = do_checkpoint_i & (num_checkpoints_q < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
+//assign checkpoint_enable = do_checkpoint_i & (num_checkpoints_q < (NUM_CHECKPOINTS - 1)) & (~do_recover_i) & (~recover_commit_i);
 
 // User can write to table to add new destination register
-assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0) & (~recover_commit_i);
+//assign write_enable = write_dst_i & (~do_recover_i) & (old_dst_i != 5'h0) & (~recover_commit_i);
 
 // User can wirte to commit table to add new destination register
-assign commit_write_enable_0 = commit_write_dst_i[0] & (commit_old_dst_i[0] != 5'h0) & (~recover_commit_i);
-assign commit_write_enable_1 = commit_write_dst_i[1] & (commit_old_dst_i[1] != 5'h0) & (~recover_commit_i);
+//assign commit_write_enable_0 = commit_write_dst_i[0] & (commit_old_dst_i[0] != 5'h0) & (~recover_commit_i);
+//assign commit_write_enable_1 = commit_write_dst_i[1] & (commit_old_dst_i[1] != 5'h0) & (~recover_commit_i);
 
 // User can read the table if no recover action is being done
-assign read_enable = (~do_recover_i) & (~recover_commit_i);
+//assign read_enable = (~do_recover_i) & (~recover_commit_i);
 
 // User can mark registers as ready if no recover action is being done
 // Multiple register can be marked as ready
 always_comb begin
+    for (int i = 0; i<NUM_SCALAR_INSTR; ++i) begin
+        checkpoint_enable[i] = do_checkpoint_i & (num_checkpoints_q < (NUM_CHECKPOINTS - (i+1))) & (~do_recover_i) & (~recover_commit_i);
+        // User can write to table to add new destination register
+        write_enable[i] = write_dst_i[i] & (~do_recover_i) & (old_dst_i[i] != 5'h0) & (~recover_commit_i);
+        // User can wirte to commit table to add new destination register
+        commit_write_enable_0[i] = commit_write_dst_i[0+(1*i)] & (commit_old_dst_i[0+(1*i)] != 5'h0) & (~recover_commit_i);
+        commit_write_enable_1[i] = commit_write_dst_i[1+(1*i)] & (commit_old_dst_i[1+(1*i)] != 5'h0) & (~recover_commit_i);
+        // User can read the table if no recover action is being done
+        read_enable[i] = (~do_recover_i) & (~recover_commit_i);
+
+    end
     for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
         ready_enable[i] = ready_i[i] &  (~recover_commit_i);
     end
