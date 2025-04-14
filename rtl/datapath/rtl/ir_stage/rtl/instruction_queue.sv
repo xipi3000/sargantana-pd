@@ -94,8 +94,8 @@ end
 //assign instruction_1_o = (~read_enable_1)? 'h0 : instruction_buffer[head];
 
 //TODO: Beware!! This head-1 will make errors if no instruction 2 is on the instrucition queue
-assign instruction_1_o = empty_o ? 'h0 : instruction_buffer[head-1];
-assign instruction_2_o = empty_o ? 'h0 : instruction_buffer[head];
+assign instruction_1_o = empty_o? 'h0 :  instruction_buffer[head-read_enable_2];
+assign instruction_2_o = empty_o && read_enable_2? 'h0 : instruction_buffer[head];
 assign empty_o = (num == 0);
 assign full_o  = ((num == INSTRUCTION_QUEUE_NUM_ENTRIES) | ~rstn_i);
 
