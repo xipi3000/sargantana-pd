@@ -76,12 +76,9 @@ module tb_rename_table();
         .old_dst_i(tb_old_dst_i),
         .write_dst_i(tb_write_dst_i),
         .new_dst_i(tb_new_dst_i),
-        .ready1_i('h0), 
-        .vaddr1_i('h0),  
-        .paddr1_i('h0),
-        .ready2_i('h0),
-        .vaddr2_i('h0),  
-        .paddr2_i('h0),
+        .ready_i({'h0,'h0}), 
+        .vaddr_i({'h0,'h0}),  
+        .paddr_i({'h0,'h0}),
         .recover_commit_i('h0),
         .commit_old_dst_i('h0), 
         .commit_write_dst_i('h0), 
@@ -171,12 +168,12 @@ module tb_rename_table();
             assert(tb_out_of_checkpoints_o == 0) else begin tmp++; assert(1 == 0); end
     
             for (int i=0; i<32; i++) begin
-                assert(rename_table_inst.register_table[i][0] == i ) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.register_table_d[i][0] == i ) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(rename_table_inst.version_head == 0) else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_q == 0) else begin tmp++; assert(1 == 0); end
             #CLK_PERIOD;
 
         end
@@ -200,9 +197,9 @@ module tb_rename_table();
                 assert(tb_src2_o == i[4:0]) else begin tmp++; assert(1 == 0); end
                 assert(tb_old_dst_o == i[4:0]) else begin tmp++; assert(1 == 0); end
 
-                assert(rename_table_inst.version_head == 0) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.num_checkpoints == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_head_d == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.num_checkpoints_d == 0) else begin tmp++; assert(1 == 0); end
             end
 
             for(int i=0; i<32; i++) begin            // Reads a register and renames it
@@ -222,22 +219,22 @@ module tb_rename_table();
                 assert(tb_src2_o == i[4:0]) else begin tmp++; assert(1 == 0); end
                 assert(tb_old_dst_o == i[4:0]) else begin tmp++; assert(1 == 0); end
 
-                assert(rename_table_inst.version_head == 0) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.num_checkpoints == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_head_d == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.num_checkpoints_d == 0) else begin tmp++; assert(1 == 0); end
             end
 
             assert(tb_out_of_checkpoints_o == 0) else begin tmp++; assert(1 == 0); end
     
-            assert(rename_table_inst.register_table[0][0] == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.register_table_d[0][0] == 0) else begin tmp++; assert(1 == 0); end
     
             for (int i=1; i<32; i++) begin
-                assert(rename_table_inst.register_table[i][0] == i + 32) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.register_table_d[i][0] == i + 32) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(rename_table_inst.version_head == 0) else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 0) else begin tmp++; assert(1 == 0); end
             
         end
     endtask
@@ -259,23 +256,23 @@ module tb_rename_table();
 
             assert(tb_out_of_checkpoints_o == 0) else begin tmp++; assert(1 == 0); end
     
-            assert(rename_table_inst.register_table[0][0] == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.register_table_d[0][0] == 0) else begin tmp++; assert(1 == 0); end
     
             for (int i=1; i<32; i++) begin
-                assert(rename_table_inst.register_table[i][0] == i + 32) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.register_table_d[i][0] == i + 32) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(rename_table_inst.version_head == 1) else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 1) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 1) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 1) else begin tmp++; assert(1 == 0); end
 
             // Check new version pointers and state
-            assert(rename_table_inst.register_table[0][0] == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.register_table_d[0][0] == 0) else begin tmp++; assert(1 == 0); end
             
-            assert(rename_table_inst.register_table[0][1] == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.register_table_d[0][1] == 0) else begin tmp++; assert(1 == 0); end
             
             for (int i=1; i<32; i++) begin
-                assert(rename_table_inst.register_table[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.register_table_d[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
             end
             
             // Check checkpoint label is correct
@@ -309,9 +306,9 @@ module tb_rename_table();
                     assert(tb_old_dst_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end    
                 end
 
-                assert(rename_table_inst.version_head == 1) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.num_checkpoints == 1) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_head_d == 1) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.num_checkpoints_d == 1) else begin tmp++; assert(1 == 0); end
             end
 
 
@@ -320,26 +317,26 @@ module tb_rename_table();
             tick();
 
             // Check old version  state
-            assert(rename_table_inst.register_table[0][0] == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.register_table_d[0][0] == 0) else begin tmp++; assert(1 == 0); end
 
             for (int i=1; i<32; i++) begin
-                assert(rename_table_inst.register_table[i][0] == i + 32 ) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.register_table_d[i][0] == i + 32 ) else begin tmp++; assert(1 == 0); end
             end
 
-            assert(rename_table_inst.register_table[0][1] == 0) else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.register_table_d[0][1] == 0) else begin tmp++; assert(1 == 0); end
 
             // Check new version  state
             for (int i=1; i<32; i++) begin
                 if (i%2 == 0) 
-                    assert(rename_table_inst.register_table[i][1] == i ) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i ) else begin tmp++; assert(1 == 0); end
                 else
-                    assert(rename_table_inst.register_table[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
             end 
 
             // Check checkpoints pointers state
-            assert(rename_table_inst.version_head == 1)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 0)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 0)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 1)  else begin tmp++; assert(1 == 0); end
   
             // We DO A SECOND CHECKPOINT
             tb_do_checkpoint_i <= 1'b1;
@@ -355,23 +352,23 @@ module tb_rename_table();
             // Check old version state
             for (int i=0; i<32; i++) begin
                 if (i%2 == 0) 
-                    assert(rename_table_inst.register_table[i][1] == i ) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i ) else begin tmp++; assert(1 == 0); end
                 else
-                    assert(rename_table_inst.register_table[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
             end
 
             // Check new version state
             for (int i=0; i<32; i++) begin
                 if (i%2 == 0) 
-                    assert(rename_table_inst.register_table[i][2] == i ) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][2] == i ) else begin tmp++; assert(1 == 0); end
                 else
-                    assert(rename_table_inst.register_table[i][2] == i + 32) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][2] == i + 32) else begin tmp++; assert(1 == 0); end
             end 
 
             // Check checkpoints pointers state
-            assert(rename_table_inst.version_head == 2)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 0)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 2)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 2)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 0)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 2)  else begin tmp++; assert(1 == 0); end
             
             // Check checkpoint label is correct
             assert(tb_checkpoint_o == 1)  else begin tmp++; assert(1 == 0); end
@@ -398,9 +395,9 @@ module tb_rename_table();
                 assert(tb_src2_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
                 assert(tb_old_dst_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
 
-                assert(rename_table_inst.version_head == 2) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.version_tail == 0) else begin tmp++; assert(1 == 0); end
-                assert(rename_table_inst.num_checkpoints == 2) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_head_d == 2) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.num_checkpoints_d == 2) else begin tmp++; assert(1 == 0); end
             end
 
             // Free Checkpoint
@@ -417,20 +414,20 @@ module tb_rename_table();
             // Check old version state
             for (int i=0; i<32; i++) begin
                 if (i%2 == 0) 
-                    assert(rename_table_inst.register_table[i][1] == i ) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i ) else begin tmp++; assert(1 == 0); end
                 else
-                    assert(rename_table_inst.register_table[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
             end
 
             // Check new version state
             for (int i=0; i<32; i++) begin
-                assert(rename_table_inst.register_table[i][2] == i) else begin tmp++; assert(1 == 0); end
+                assert(rename_table_inst.register_table_d[i][2] == i) else begin tmp++; assert(1 == 0); end
             end 
 
             // Check checkpoints pointers state
-            assert(rename_table_inst.version_head == 2)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 1)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 2)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 1)  else begin tmp++; assert(1 == 0); end
             
             // Check checkpoint label is correct
             assert(tb_checkpoint_o == 2)  else begin tmp++; assert(1 == 0); end
@@ -451,15 +448,15 @@ module tb_rename_table();
             // Check new version state
             for (int i=0; i<32; i++) begin
                 if (i%2 == 0) 
-                    assert(rename_table_inst.register_table[i][1] == i ) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i ) else begin tmp++; assert(1 == 0); end
                 else
-                    assert(rename_table_inst.register_table[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
+                    assert(rename_table_inst.register_table_d[i][1] == i + 32) else begin tmp++; assert(1 == 0); end
             end 
 
             // Check checkpoints pointers state
-            assert(rename_table_inst.version_head == 1)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 1)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 0)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 0)  else begin tmp++; assert(1 == 0); end
 
             // Do checkpoints until run out of them
 
@@ -477,9 +474,9 @@ module tb_rename_table();
             tick();
 
             // Check checkpoints pointers state
-            assert(rename_table_inst.version_head == 0)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.version_tail == 1)  else begin tmp++; assert(1 == 0); end
-            assert(rename_table_inst.num_checkpoints == 3)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_head_d == 0)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.version_tail_d == 1)  else begin tmp++; assert(1 == 0); end
+            assert(rename_table_inst.num_checkpoints_d == 3)  else begin tmp++; assert(1 == 0); end
         end
     endtask
 
