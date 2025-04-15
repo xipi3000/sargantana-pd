@@ -40,3 +40,6 @@ The list of authors can be found in the [CONTRIBUTORS.md](CONTRIBUTORS.md) file.
 ## 5. Citation
 
 Víctor Soria-Pardos, Max Doblas, Guillem López-Paradís, Gerard Candón, Narcís Rodas, Xavier Carril, Pau Fontova-Musté, Neiel Leyva, Santiago Marco-Sola, and Miquel Moretó. ["Sargantana: A 1 GHz+ in-order RISC-V processor with SIMD vector extensions in 22nm FD-SOI"](https://upcommons.upc.edu/bitstream/handle/2117/384912/sargantana_preprint.pdf?sequence=1). 25th Euromicro, 2022.
+
+# 6. Test bench 
+Install Quarkus and ModelSim.  https://vhdlwhiz.com/modelsim-quartus-prime-lite-ubuntu-20-04/
