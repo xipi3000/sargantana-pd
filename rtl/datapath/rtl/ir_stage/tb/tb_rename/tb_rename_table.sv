@@ -44,12 +44,12 @@ module tb_rename_table();
     reg tb_clk_i;
     reg tb_rstn_i;
 
-    logic [4:0] tb_read_src1_i;
-    logic [4:0] tb_read_src2_i;
-    logic [4:0] tb_old_dst_i;
+    logic [4:0] tb_read_src1_S_i [2];
+    logic [4:0] tb_read_src2_S_i [2];
+    logic [4:0] tb_old_dst_S_i[2];
 
-    logic tb_write_dst_i;
-    logic [5:0] tb_new_dst_i;
+    logic  tb_write_dst_S_i[2];
+    logic [5:0] tb_new_dst_S_i[2];
 
     logic tb_do_checkpoint_i;
     logic tb_do_recover_i;
@@ -58,11 +58,11 @@ module tb_rename_table();
     logic [1:0] tb_checkpoint_o;
     logic tb_out_of_checkpoints_o;
 
-    logic [5:0] tb_src1_o;
-    logic       tb_rdy1_o;
-    logic [5:0] tb_src2_o;
-    logic       tb_rdy2_o;
-    logic [5:0] tb_old_dst_o;
+    logic [5:0] tb_src1_S_o [2];
+    logic       tb_rdy1_S_o [2];
+    logic [5:0] tb_src2_S_o [2];
+    logic       tb_rdy2_S_o [2];
+    logic [5:0] tb_old_dst_S_o [2];
 
 //-----------------------------
 // Module
@@ -71,27 +71,27 @@ module tb_rename_table();
     rename_table rename_table_inst(
         .clk_i(tb_clk_i),               
         .rstn_i(tb_rstn_i),             
-        .read_src1_i(tb_read_src1_i),   
-        .read_src2_i(tb_read_src2_i),
-        .old_dst_i(tb_old_dst_i),
-        .write_dst_i(tb_write_dst_i),
-        .new_dst_i(tb_new_dst_i),
+        .read_src1_S_i(tb_read_src1_S_i),   
+        .read_src2_S_i(tb_read_src2_S_i),
+        .old_dst_S_i(tb_old_dst_S_i),
+        .write_dst_S_i(tb_write_dst_S_i),
+        .new_dst_S_i(tb_new_dst_S_i),
         .ready_i({'h0,'h0}), 
         .vaddr_i({'h0,'h0}),  
         .paddr_i({'h0,'h0}),
         .recover_commit_i('h0),
-        .commit_old_dst_i('h0), 
-        .commit_write_dst_i('h0), 
-        .commit_new_dst_i('h0),
+        .commit_old_dst_S_i('{default:'h0}), 
+        .commit_write_dst_S_i('{default:'h0}), 
+        .commit_new_dst_S_i('{default:'h0}),
         .do_checkpoint_i(tb_do_checkpoint_i),
         .do_recover_i(tb_do_recover_i),
         .delete_checkpoint_i(tb_delete_checkpoint_i),
         .recover_checkpoint_i(tb_recover_checkpoint_i),           
-        .src1_o(tb_src1_o),
-        .rdy1_o(tb_rdy1_o),
-        .src2_o(tb_src2_o),
-        .rdy2_o(tb_rdy2_o),
-        .old_dst_o(tb_old_dst_o),
+        .src1_S_o(tb_src1_S_o),
+        .rdy1_S_o(tb_rdy1_S_o),
+        .src2_S_o(tb_src2_S_o),
+        .rdy2_S_o(tb_rdy2_S_o),
+        .old_dst_S_o(tb_old_dst_S_o),
         .checkpoint_o(tb_checkpoint_o),
         .out_of_checkpoints_o(tb_out_of_checkpoints_o)
     );
@@ -124,11 +124,11 @@ module tb_rename_table();
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            tb_read_src1_i<='{default:0};
-            tb_read_src2_i<='{default:0};
-            tb_old_dst_i<='{default:0};
-            tb_write_dst_i<='{default:0};
-            tb_new_dst_i<='{default:0};
+            tb_read_src1_S_i<='{default:0};
+            tb_read_src2_S_i<='{default:0};
+            tb_old_dst_S_i<='{default:0};
+            tb_write_dst_S_i<='{default:0};
+            tb_new_dst_S_i<='{default:0};
 
             tb_do_checkpoint_i<='{default:0};
             tb_do_recover_i<='{default:0};
@@ -184,40 +184,40 @@ module tb_rename_table();
     task automatic test_sim_2;
         output int tmp;
         begin
-            for(int i=0; i<32; i++) begin            // Reads 32 registers mapping
-                tb_read_src1_i <= i[4:0];
-                tb_read_src2_i <= i[4:0];
-                tb_old_dst_i <= i[4:0]; 
+            for(int i=0; i<32; i= i+2) begin            // Reads 32 registers mapping
+                tb_read_src1_S_i <= {i[4:0], i[4:0]+1'd1};
+                tb_read_src2_S_i <= {i[4:0],i[4:0]+1'd1};
+                tb_old_dst_S_i <= {i[4:0],i[4:0]+1'd1}; 
                 tick();
-                tb_read_src1_i <= 5'h0;
-                tb_read_src2_i <= 5'h0;
-                tb_old_dst_i <= 5'h0; 
+                tb_read_src1_S_i <= { default :5'h0 };
+                tb_read_src2_S_i <= { default :5'h0 };
+                tb_old_dst_S_i <= { default :5'h0 }; 
                 tick();
-                assert(tb_src1_o == i[4:0]) else begin tmp++; assert(1 == 0); end
-                assert(tb_src2_o == i[4:0]) else begin tmp++; assert(1 == 0); end
-                assert(tb_old_dst_o == i[4:0]) else begin tmp++; assert(1 == 0); end
+                assert(tb_src1_S_o == '{i[4:0],i[4:0]+1'd1}) else begin tmp++; assert(1 == 0); end
+                assert(tb_src2_S_o == '{i[4:0],i[4:0]+1'd1}) else begin tmp++; assert(1 == 0); end
+                assert(tb_old_dst_S_o == '{i[4:0],i[4:0]+1'd1}) else begin tmp++; assert(1 == 0); end
 
                 assert(rename_table_inst.version_head_d == 0) else begin tmp++; assert(1 == 0); end
                 assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
                 assert(rename_table_inst.num_checkpoints_d == 0) else begin tmp++; assert(1 == 0); end
             end
 
-            for(int i=0; i<32; i++) begin            // Reads a register and renames it
-                tb_read_src1_i <= i[4:0];
-                tb_read_src2_i <= i[4:0];
-                tb_old_dst_i <= i[4:0];
-                tb_write_dst_i <= 1'b1;
-                tb_new_dst_i <= {1'b1,i[4:0]};
+            for(int i=0; i<32; i=i+2) begin            // Reads a register and renames it
+                tb_read_src1_S_i <= {i[4:0],i[4:0]+1'd1};
+                tb_read_src2_S_i <= {i[4:0],i[4:0]+1'd1};
+                tb_old_dst_S_i <= {i[4:0],i[4:0]+1'd1};
+                tb_write_dst_S_i <= {default : 1'b1};
+                tb_new_dst_S_i <= {{1'b1,i[4:0]},{1'b1,i[4:0]+1'd1}};
                 tick();
-                tb_read_src1_i <= 5'h0;
-                tb_read_src2_i <= 5'h0;
-                tb_old_dst_i <= 5'h0;
-                tb_write_dst_i <= 1'b0;
-                tb_new_dst_i <= 6'h0;
+                tb_read_src1_S_i <= { default :5'h0 };
+                tb_read_src2_S_i <= { default :5'h0 };
+                tb_old_dst_S_i <={ default :5'h0 };
+                tb_write_dst_S_i <= { default :1'b0 };
+                tb_new_dst_S_i <={ default :6'h0 };
                 tick();
-                assert(tb_src1_o == i[4:0]) else begin tmp++; assert(1 == 0); end
-                assert(tb_src2_o == i[4:0]) else begin tmp++; assert(1 == 0); end
-                assert(tb_old_dst_o == i[4:0]) else begin tmp++; assert(1 == 0); end
+                assert(tb_src1_S_o == '{i[4:0],i[4:0]+1'd1}) else begin tmp++; assert(1 == 0); end
+                assert(tb_src2_S_o == '{i[4:0],i[4:0]+1'd1}) else begin tmp++; assert(1 == 0); end
+                assert(tb_old_dst_S_o == '{i[4:0],i[4:0]+1'd1}) else begin tmp++; assert(1 == 0); end
 
                 assert(rename_table_inst.version_head_d == 0) else begin tmp++; assert(1 == 0); end
                 assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
@@ -280,30 +280,30 @@ module tb_rename_table();
 
             // Renames 16 registers
 
-            for(int i=0; i<32; i+=2) begin
+            for(int i=0; i<32; i+=4) begin
 
-                tb_read_src1_i <= i[4:0];
-                tb_read_src2_i <= i[4:0];
-                tb_old_dst_i <= i[4:0];
-                tb_write_dst_i <= 1'b1;
-                tb_new_dst_i <= {1'b0,i[4:0]};
+                tb_read_src1_S_i <= {i[4:0],i[4:0]+2'd2};
+                tb_read_src2_S_i <={i[4:0],i[4:0]+2'd2};
+                tb_old_dst_S_i <= {i[4:0],i[4:0]+2'd2};
+                tb_write_dst_S_i <= {default : 1'b1};
+                tb_new_dst_S_i <= {{1'b0,i[4:0]},{1'b0,i[4:0]+2'd2}};
                 tick();
 
-                tb_read_src1_i <= 5'h0;
-                tb_read_src2_i <= 5'h0;
-                tb_old_dst_i <= 5'h0;
-                tb_write_dst_i <= 1'b0;
-                tb_new_dst_i <= 6'h0;
+                tb_read_src1_S_i <= { default :5'h0 };
+                tb_read_src2_S_i <= { default :5'h0 };
+                tb_old_dst_S_i <= { default :5'h0 };
+                tb_write_dst_S_i <= { default :1'b0 };
+                tb_new_dst_S_i <= { default :6'h0 };
                 tick();
                 
                 if (i == 0) begin
-                    assert(tb_src1_o == 0 ) else begin tmp++; assert(1 == 0); end
-                    assert(tb_src2_o == 0 ) else begin tmp++; assert(1 == 0); end
-                    assert(tb_old_dst_o == 0 ) else begin tmp++; assert(1 == 0); end
+                    assert(tb_src1_S_o == '{0,2} ) else begin tmp++; assert(1 == 0); end
+                    assert(tb_src2_S_o == '{0,2}) else begin tmp++; assert(1 == 0); end
+                    assert(tb_old_dst_S_o == '{0,2} ) else begin tmp++; assert(1 == 0); end
                 end else begin
-                    assert(tb_src1_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
-                    assert(tb_src2_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
-                    assert(tb_old_dst_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end    
+                    assert(tb_src1_S_o == '{ i[4:0] +32 , i[4:0] + 34 }) else begin tmp++; assert(1 == 0); end
+                    assert(tb_src2_S_o == '{ i[4:0] +32 , i[4:0] + 34 } ) else begin tmp++; assert(1 == 0); end
+                    assert(tb_old_dst_S_o == '{ i[4:0] +32 , i[4:0] + 34 } ) else begin tmp++; assert(1 == 0); end    
                 end
 
                 assert(rename_table_inst.version_head_d == 1) else begin tmp++; assert(1 == 0); end
@@ -376,24 +376,24 @@ module tb_rename_table();
             tick();
 
             // Renames 16 registers
-            for(int i=1; i<32; i+=2) begin
-                tb_read_src1_i <= i[4:0];
-                tb_read_src2_i <= i[4:0];
-                tb_old_dst_i <= i[4:0];
-                tb_write_dst_i <= 1'b1;
-                tb_new_dst_i <= {1'b0,i[4:0]};
+            for(int i=1; i<32; i+=4) begin
+                tb_read_src1_S_i <= {i[4:0],i[4:0]+2'd2};
+                tb_read_src2_S_i <= {i[4:0],i[4:0]+2'd2};
+                tb_old_dst_S_i <= {i[4:0],i[4:0]+2'd2};
+                tb_write_dst_S_i <= {default : 1'b1};
+                tb_new_dst_S_i <= {{1'b0,i[4:0]},{1'b0,i[4:0]+2'd2}};
                 tick();
 
-                tb_read_src1_i <= 5'h0;
-                tb_read_src2_i <= 5'h0;
-                tb_old_dst_i <= 5'h0;
-                tb_write_dst_i <= 1'b0;
-                tb_new_dst_i <= 6'h0;
+                tb_read_src1_S_i <= { default :5'h0 };
+                tb_read_src2_S_i <= { default :5'h0 };
+                tb_old_dst_S_i <= { default :5'h0 };
+                tb_write_dst_S_i <=  { default :1'b0 };
+                tb_new_dst_S_i <= { default :6'h0 };
                 tick();
 
-                assert(tb_src1_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
-                assert(tb_src2_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
-                assert(tb_old_dst_o == i[4:0] + 32 ) else begin tmp++; assert(1 == 0); end
+                assert(tb_src1_S_o == '{ i[4:0] +32 , i[4:0] + 34 }) else begin tmp++; assert(1 == 0); end
+                assert(tb_src2_S_o =='{ i[4:0] +32 , i[4:0] + 34 } ) else begin tmp++; assert(1 == 0); end
+                assert(tb_old_dst_S_o == '{ i[4:0] +32 , i[4:0] + 34 }) else begin tmp++; assert(1 == 0); end
 
                 assert(rename_table_inst.version_head_d == 2) else begin tmp++; assert(1 == 0); end
                 assert(rename_table_inst.version_tail_d == 0) else begin tmp++; assert(1 == 0); end
@@ -511,6 +511,7 @@ module tb_rename_table();
                 `END_COLOR_PRINT
             end
             // Test checkpointing
+            
             test_sim_3(tmp); 
             if (tmp >= 1) begin
                 `START_RED_PRINT

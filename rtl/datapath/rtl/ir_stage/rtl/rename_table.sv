@@ -25,34 +25,34 @@ module rename_table
     input wire                        clk_i,               // Clock Singal
     input wire                        rstn_i,              // Negated Reset Signal
 
-    input reg_t [NUM_SCALAR_INSTR-1:0]                 read_src1_S_i,         // Read source register 1 mapping
-    input reg_t [NUM_SCALAR_INSTR-1:0]                 read_src2_S_i,         // Read source register 2 mapping
-    input reg_t [NUM_SCALAR_INSTR-1:0]                 old_dst_S_i,           // Read and write to old destination register
-    input logic [NUM_SCALAR_INSTR-1:0]                 write_dst_S_i,         // Needs to write to old destination register
-    input phreg_t [NUM_SCALAR_INSTR-1:0]               new_dst_S_i,           // Wich register write to old destination register
+    input reg_t  read_src1_S_i [NUM_SCALAR_INSTR-1:0],         // Read source register 1 mapping
+    input reg_t                  read_src2_S_i[NUM_SCALAR_INSTR-1:0],         // Read source register 2 mapping
+    input reg_t                  old_dst_S_i [NUM_SCALAR_INSTR-1:0],           // Read and write to old destination register
+    input logic                  write_dst_S_i[NUM_SCALAR_INSTR-1:0],         // Needs to write to old destination register
+    input phreg_t               new_dst_S_i[NUM_SCALAR_INSTR-1:0] ,           // Wich register write to old destination register
 
-    input logic [NUM_SCALAR_INSTR-1:0]                  use_rs1_S_i,           // Instruction uses source register 1
-    input logic [NUM_SCALAR_INSTR-1:0]                 use_rs2_S_i,           // Instruction uses source register 2
+    input logic                 use_rs1_S_i[NUM_SCALAR_INSTR-1:0]  ,           // Instruction uses source register 1
+    input logic                use_rs2_S_i[NUM_SCALAR_INSTR-1:0]  ,           // Instruction uses source register 2
 
     input logic   [NUM_SCALAR_WB-1:0] ready_i,             // New register is ready
     input reg_t   [NUM_SCALAR_WB-1:0] vaddr_i,             // New register is ready
     input phreg_t [NUM_SCALAR_WB-1:0] paddr_i,             // New register is ready
 
     input logic                       recover_commit_i,    // Copy commit table on register table
-    input reg_t [NUM_SCALAR_INSTR-1:0][1:0]                 commit_old_dst_S_i,    // Read and write to old destination register at commit table
-    input logic [NUM_SCALAR_INSTR-1:0][1:0]                 commit_write_dst_S_i,  // Needs to write to old destination register at commit table
-    input phreg_t [NUM_SCALAR_INSTR-1:0][1:0]               commit_new_dst_S_i,    // Wich register write to old destination register at commit table
+    input reg_t [1:0]                 commit_old_dst_S_i[NUM_SCALAR_INSTR-1:0],    // Read and write to old destination register at commit table
+    input logic [1:0]                 commit_write_dst_S_i[NUM_SCALAR_INSTR-1:0],  // Needs to write to old destination register at commit table
+    input phreg_t [1:0]               commit_new_dst_S_i[NUM_SCALAR_INSTR-1:0],    // Wich register write to old destination register at commit table
 
     input wire                        do_checkpoint_i,     // After renaming do a checkpoint
     input wire                        do_recover_i,        // Recover a checkpoint
     input wire                        delete_checkpoint_i, // Delete tail checkpoint
     input checkpoint_ptr              recover_checkpoint_i,// Label of the checkpoint to recover  
 
-    output phreg_t  [NUM_SCALAR_INSTR-1:0]                  src1_S_o,              // Read source register 1 mapping
-    output logic [NUM_SCALAR_INSTR-1:0]                     rdy1_S_o,              // Ready source register 1
-    output phreg_t  [NUM_SCALAR_INSTR-1:0]                  src2_S_o,              // Read source register 2 mapping
-    output logic  [NUM_SCALAR_INSTR-1:0]                    rdy2_S_o,              // Ready source register 2
-    output phreg_t  [NUM_SCALAR_INSTR-1:0]                  old_dst_S_o,           // Read destination register mapping
+    output phreg_t                    src1_S_o[NUM_SCALAR_INSTR-1:0],              // Read source register 1 mapping
+    output logic                      rdy1_S_o[NUM_SCALAR_INSTR-1:0],              // Ready source register 1
+    output phreg_t                   src2_S_o[NUM_SCALAR_INSTR-1:0] ,              // Read source register 2 mapping
+    output logic                    rdy2_S_o[NUM_SCALAR_INSTR-1:0]  ,              // Ready source register 2
+    output phreg_t                    old_dst_S_o[NUM_SCALAR_INSTR-1:0],           // Read destination register mapping
 
     output checkpoint_ptr             checkpoint_o,        // Label of checkpoint
     output wire                       out_of_checkpoints_o // No more checkpoints

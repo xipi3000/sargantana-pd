@@ -525,7 +525,7 @@ assign free_list_read_src1_int_2 = (debug_i_2.reg_read_valid  && debug_i_2.halt_
         .read_head_2_i            (stage_iq_ir_q_2.instr.regfile_we & stage_iq_ir_q_2.instr.valid & (stage_iq_ir_q_2.instr.rd != 'h0) & (~control_int.stall_ir) & (~control_int.stall_iq)),
         .add_free_register_i    (cu_ir_int.enable_commit_update),
         .free_register_1_i        ({instruction_to_commit[1].old_prd, instruction_to_commit[0].old_prd}),
-        .free_register_2_i        ({instruction_to_commit_2[1].old_prd, instruction_to_commit_2[0].old_prd}),
+        //.free_register_2_i        ({instruction_to_commit_2[1].old_prd, instruction_to_commit_2[0].old_prd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
