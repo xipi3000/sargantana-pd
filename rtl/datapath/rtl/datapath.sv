@@ -1118,7 +1118,7 @@ assign free_list_read_src1_int_2 = (debug_i_2.reg_read_valid  && debug_i_2.halt_
 
     end
 
-
+ 
     // WB data to RR
     always_comb begin
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin

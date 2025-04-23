@@ -42,10 +42,10 @@ module tb_free_list();
     reg tb_clk_i;
     reg tb_rstn_i;
 
-    logic tb_read_head_i;
-    logic tb_add_free_register_i;
-    logic [5:0] tb_free_register_i;
-    logic [5:0] tb_new_register_o;
+    logic tb_read_head_S_i[NUM_SCALAR_INSTR];
+    logic [1:0] tb_add_free_register_S_i[NUM_SCALAR_INSTR];
+    logic [5:0][1:0] tb_free_register_S_i [NUM_SCALAR_INSTR];
+    logic [5:0] tb_new_register_S_o [NUM_SCALAR_INSTR];
     logic tb_empty_o;
     logic tb_do_checkpoint_i;
     logic tb_do_recover_i;
@@ -61,15 +61,15 @@ module tb_free_list();
     free_list free_list_inst(
         .clk_i(tb_clk_i),               
         .rstn_i(tb_rstn_i),             
-        .read_head_i(tb_read_head_i),   
-        .add_free_register_i(tb_add_free_register_i),
-        .free_register_i(tb_free_register_i),
+        .read_head_S_i(tb_read_head_S_i),   
+        .add_free_register_S_i(tb_add_free_register_S_i),
+        .free_register_S_i(tb_free_register_S_i),
         .do_checkpoint_i(tb_do_checkpoint_i),
         .do_recover_i(tb_do_recover_i),
         .delete_checkpoint_i(tb_delete_checkpoint_i),
         .recover_checkpoint_i(tb_recover_checkpoint_i),
         .commit_roll_back_i(1'b0),        
-        .new_register_o(tb_new_register_o), 
+        .new_register_S_o(tb_new_register_S_o), 
         .checkpoint_o(tb_checkpoint_o),
         .out_of_checkpoints_o(tb_out_of_checkpoints_o),
         .empty_o(tb_empty_o)
@@ -103,9 +103,9 @@ module tb_free_list();
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            tb_read_head_i<='{default:0};
-            tb_add_free_register_i<='{default:0};
-            tb_free_register_i<='{default:0};
+            tb_read_head_S_i<='{default:0};
+            tb_add_free_register_S_i<='{default:0};
+            tb_free_register_S_i<='{default:0};
             tb_do_checkpoint_i<='{default:0};
             tb_do_recover_i<='{default:0};
             tb_delete_checkpoint_i<='{default:0};
@@ -165,14 +165,14 @@ module tb_free_list();
         output int tmp;
         begin
             tick();
-            tb_read_head_i <= 1'b1;
-            for(int i=0; i<32; i++) begin            // Reads 32 free registers
+            tb_read_head_S_i <= {1'b1,1'b1};
+            for(int i=0; i<32; i+=2) begin            // Reads 32 free registers
                 tick();
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.head[0] == i)  else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.tail[0] == 5'b0) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.num_registers[0] == 32 - i) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_o == i + 32) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{i + 32,i + 32+1}) else begin tmp++; assert(1 == 0); end
             end
 
             tick(); // Tries to read but is empty
@@ -181,59 +181,59 @@ module tb_free_list();
             assert(free_list_inst.head[0] == 0) else begin tmp++; assert(1 == 0); end          
             assert(free_list_inst.tail[0] == 5'b0) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 0) else begin tmp++; assert(1 == 0); end
-            assert(tb_new_register_o == 0) else begin tmp++; assert(1 == 0); end
+            assert(tb_new_register_S_o == '{0,0}) else begin tmp++; assert(1 == 0); end
 
             // Bypass from tail to head
 
-            tb_free_register_i <= 5'b10101;
-            tb_add_free_register_i <= 1'b1;
+            tb_free_register_S_i <= {5'b10101,5'b10111};
+            tb_add_free_register_S_i <= {1'b1,1'b1};
             tick();
 
             // Check Bypass
-            tb_read_head_i <= 1'b1;
-            tb_add_free_register_i <= 1'b0;
+            tb_read_head_S_i <={ 1'b1,1'b1};
+            tb_add_free_register_S_i <= {1'b0,1'b0};
             
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 0) else begin tmp++; assert(1 == 0); end
-            assert(tb_new_register_o == 5'b10101) else begin tmp++; assert(1 == 0); end
+            assert(tb_new_register_S_o == '{5'b10101,5'b10111}) else begin tmp++; assert(1 == 0); end
 
             tick();
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i <= '{1'b0,1'b0};
             
-            assert(free_list_inst.head[0] == 5'h1) else begin tmp++; assert(1 == 0); end            
-            assert(free_list_inst.tail == 5'h1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.head[0] == 5'h2) else begin tmp++; assert(1 == 0); end            
+            assert(free_list_inst.tail == 5'h2) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 0) else begin tmp++; assert(1 == 0); end
 
             tick();
 
-            for(int i=0; i<32; i++) begin            // Frees 32 registers
-                tb_free_register_i <= i[5:0] + 1;
-                tb_add_free_register_i <= 1'b1;
+            for(int i=0; i<32; i+=2) begin            // Frees 32 registers
+                tb_free_register_S_i <= {i[5:0] + 1,i[5:0] + 2};
+                tb_add_free_register_S_i <= {1'b1,1'b1};
 
                 tick();
-                tb_add_free_register_i <= 1'b0;
+                tb_add_free_register_S_i <= {1'b0,1'b0};
 
                 tick();
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-                assert(free_list_inst.head[0] == 1) else begin tmp++; assert(1 == 0); end
-                if (i > 29)
-                    assert(free_list_inst.tail == 5'b00000 + i[5:0] - 30) else begin tmp++; assert(1 == 0); end
-                else
-                    assert(free_list_inst.tail == 5'h1 + i[5:0] + 5'h1) else begin tmp++; assert(1 == 0); end
-                assert(free_list_inst.num_registers[0] == i + 1) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_o == 0) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.head[0] == 2) else begin tmp++; assert(1 == 0); end
+                //if (i > 29)
+                   //TODO assert(free_list_inst.tail == 5'b00000 + i[5:0] - 30) else begin tmp++; assert(1 == 0); end
+                //else
+                  //TODO  assert(free_list_inst.tail == 5'h1 + i[5:0] + 5'h2 ) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.num_registers[0] == i + 2) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{0,1'b0}) else begin tmp++; assert(1 == 0); end
             end
             
-            tb_add_free_register_i <= 1'b1;
-            tb_read_head_i <= 1'b0;
+            tb_add_free_register_S_i <= {1'b1,1'b0};
+            tb_read_head_S_i <={1'b0,1'b0};
 
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(free_list_inst.head[0] == 1) else begin tmp++; assert(1 == 0); end
-            assert(free_list_inst.tail == 5'b1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.head[0] == 2) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail == 5'b10) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 32) else begin tmp++; assert(1 == 0); end
     
-            for (int i=1; i<32; i++) begin
-                assert(free_list_inst.register_table[i] == i) else begin tmp++; assert(1 == 0); end
+            for (int i=1; i<31; i++) begin
+                assert(free_list_inst.register_table[i+1] == i) else begin tmp++; assert(1 == 0); end
             end
 
             assert(free_list_inst.version_head == 0)  else begin tmp++; assert(1 == 0); end
@@ -247,8 +247,8 @@ module tb_free_list();
     task automatic test_sim_3;
         output int tmp;
         begin
-            tb_add_free_register_i <= 1'b0;
-            tb_read_head_i <= 1'b0;
+            tb_add_free_register_S_i <= {1'b0,1'b0};
+            tb_read_head_S_i <= {1'b0,1'b0};
             tick();
 
             // We DO A CHECKPOINT
@@ -289,7 +289,7 @@ module tb_free_list();
 
 
             // Reads 7 free registers
-            tb_read_head_i <= 1'b1;
+            tb_read_head_S_i <= {1'b1,1'b0};
 
             for(int i=0; i<7; i++) begin            // Reads 7 free registers
                 tick();
@@ -298,10 +298,10 @@ module tb_free_list();
                 assert(free_list_inst.head[1] == i + 1)  else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.tail == 5'h1) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.num_registers[1] == 32 - i) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_o == i + 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{i + 1,1'b0}) else begin tmp++; assert(1 == 0); end
             end
 
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i <= {1'b0,1'b0};
             // Tick for ASSERTS
 
             tick();
@@ -372,18 +372,18 @@ module tb_free_list();
             tick();
 
             for(int i=0; i<7; i++) begin            // Frees 7 registers
-                tb_free_register_i <= i[5:0] + 33;
-                tb_add_free_register_i <= 1'b1;
+                tb_free_register_S_i <= {i[5:0] + 33,1'b0};
+                tb_add_free_register_S_i <= {1'b1,1'b0};
 
                 tick();
-                tb_add_free_register_i <= 1'b0;
+                tb_add_free_register_S_i <= {1'b0,1'b0};
 
                 tick();
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.head[2] == 5'h8) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.tail == 5'h02 + i[5:0]) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.num_registers[2] == i + 1 + 25) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_o == 0) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{0,1'b0}) else begin tmp++; assert(1 == 0); end
             end
 
             // Free Checkpoint

@@ -61,9 +61,9 @@ logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [0:NUM_CHECKPOINTS-1];
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
 
 // Determines if is gonna be read or writen
-logic write_enable_0_S;
-logic write_enable_1_S;
-logic read_enable_S;
+logic write_enable_0_S[NUM_SCALAR_INSTR];
+logic write_enable_1_S[NUM_SCALAR_INSTR];
+logic read_enable_S[NUM_SCALAR_INSTR];
 logic checkpoint_enable;
 
 
@@ -80,7 +80,7 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 // It cannot overflow the buffer. It cannot be done when recovering an old checkpoint.
 // It cannot free register 0
 always_comb begin
-    for(i =0; i<NUM_SCALAR_INSTR; i++)begin
+    for(int i =0; i<NUM_SCALAR_INSTR; i++)begin
         write_enable_0_S[i] = (add_free_register_S_i[i][0]) & (free_register_S_i[i][0] != 5'h0) & (~commit_roll_back_i);
         write_enable_1_S[i] = (add_free_register_S_i[i][1]) & (free_register_S_i[i][1] != 5'h0) & (~commit_roll_back_i);
         read_enable_S[i] = read_head_S_i[i] & ((num_registers[version_head] > 0) | write_enable_0_S[i] | write_enable_1_S[i]) & (~do_recover_i) & (~commit_roll_back_i);
@@ -249,7 +249,7 @@ begin
                 version_head <= version_head + checkpoint_enable;
                 version_head_tmp = version_head + 1'b1;
                 // Copy head position
-                head[version_head_tmp] <= head[version_head] + read_enable_S[0] + + read_enable_S[1];
+                head[version_head_tmp] <= head[version_head] + read_enable_S[0] + read_enable_S[1];
                 // Copy number of free registers.
                 num_registers[version_head_tmp]  <= num_registers[version_head]+ write_enable_0_S[0] + write_enable_1_S[0] - read_enable_S[0] + write_enable_0_S[1] + write_enable_1_S[1] - read_enable_S[1];
             end
@@ -259,10 +259,10 @@ end
 
 always_comb begin
 
-    new_register_S_o[0] = (~read_enable_S[0])? 'h0 : ((num_registers[version_head - read_enable_S[1]] == 0) & (write_enable_0_S[0])) ? free_register_S_i[1] : ((num_registers[version_head-read_enable_2] == 0) & (write_enable_1_S)) ? free_register_S_i[1] : register_table[head[version_head-read_enable_2]];
-    new_register_S_o[1] = (~read_enable_2)? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0_2)) ? free_register_2_i[0] : ((num_registers[version_head+1] == 0) & (write_enable_1_2)) ? free_register_2_i[1] : register_table[head[version_head]];
-end
-assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0_S & ~write_enable_1_S& ~write_enable_0_2 & ~write_enable_1_2;
+    new_register_S_o[0] = (~read_enable_S[0])? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0_S[0])) ? free_register_S_i[0][0] : ((num_registers[version_head] == 0) & (write_enable_1_S[0])) ? free_register_S_i[0][1] : register_table[head[version_head]];
+    new_register_S_o[1] = (~read_enable_S[1])? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0_S[1])) ? free_register_S_i[1][0] : ((num_registers[version_head] == 0) & (write_enable_1_S[1])) ? free_register_S_i[1][1] : register_table[head[version_head]+read_enable_S[0]];
+    end
+assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0_S[0] & ~write_enable_1_S[0] & ~write_enable_0_S[1] & ~write_enable_1_S[1];
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 
 `ifdef CHECK_RENAME
