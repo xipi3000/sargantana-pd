@@ -84,7 +84,7 @@ begin
     else begin
         for(int i =0; i<NUM_SCALAR_INSTR; i++) begin
         head <= head + {2'b00, read_enable_S[i]} ;
-        tail <= tail + {2'b00, write_enable_S[i]}};
+        tail <= tail + {2'b00, write_enable_S[i]};
         num  <= num  + {3'b0, write_enable_S[i]} - {3'b0, read_enable_S[i]}; 
         end
     end
