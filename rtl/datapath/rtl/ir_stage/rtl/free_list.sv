@@ -201,7 +201,11 @@ begin
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // When a register is freed increment tail
-        tail <= tail + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
+        for(int i =0 ; i < NUM_SCALAR_INSTR; i++)begin
+            tail <= tail + write_enable_0_S[i] + write_enable_1_S[i];
+        end
+        
+        //tail <= tail + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
         
         // Recompute number of free registers available.
         for(i = 0; i < NUM_CHECKPOINTS; i++) begin

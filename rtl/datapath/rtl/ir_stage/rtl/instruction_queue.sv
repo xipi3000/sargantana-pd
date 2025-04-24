@@ -82,19 +82,18 @@ begin
         num  <= 4'b0;
     end
     else begin
-        head <= head + {2'b00, read_enable_S[0]} + {2'b00, read_enable_S[1]};
-        tail <= tail + {2'b00, write_enable_S[0]} + {2'b00, write_enable_S[1]};
-        num  <= num  + {3'b0, write_enable_1} - {3'b0, read_enable_1} + {3'b0, write_enable_2} - {3'b0, read_enable_2}; 
+        for(int i =0; i<NUM_SCALAR_INSTR; i++) begin
+        head <= head + {2'b00, read_enable_S[i]} ;
+        tail <= tail + {2'b00, write_enable_S[i]}};
+        num  <= num  + {3'b0, write_enable_S[i]} - {3'b0, read_enable_S[i]}; 
+        end
     end
 end
-
-
-//assign instruction_1_o = (~read_enable_1)? 'h0 : instruction_buffer[head];
 
 //TODO: Beware!! This head-1 will make errors if no instruction 2 is on the instrucition queue
 
 assign instruction_S_o[0] = empty_o ? 'h0 :  instruction_buffer[head-read_enable_S[0]];
-assign instruction_S_o[1] = empty_o && read_enable_S[1]? 'h0 : instruction_buffer[head];
+assign instruction_S_o[1] = empty_o ? 'h0 : instruction_buffer[head];
 assign empty_o = (num == 0);
 assign full_o  = ((num == INSTRUCTION_QUEUE_NUM_ENTRIES) | ~rstn_i);
 
