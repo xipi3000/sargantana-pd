@@ -44,8 +44,8 @@ module tb_graduation_list();
 //-----------------------------
 logic                           tb_clk_i;
 logic                           tb_rstn_i;
-gl_instruction_t                tb_instruction_i;
-logic                           tb_read_head_i;
+gl_instruction_t                tb_instruction_S_i[NUM_SCALAR_INSTR];
+logic[0:1]                           tb_read_head_S_i[NUM_SCALAR_INSTR];
 gl_index_t                      tb_instruction_writeback_1_i;
 logic                           tb_instruction_writeback_enable_1_i;
 gl_instruction_t                tb_instruction_writeback_data_1_i;
@@ -69,18 +69,15 @@ logic                           tb_flush_commit_i;
 graduation_list module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
-    .instruction_i(tb_instruction_i),
-    .read_head_i(tb_read_head_i),
-    .instruction_writeback_1_i(tb_instruction_writeback_1_i),
-    .instruction_writeback_enable_1_i(tb_instruction_writeback_enable_1_i),
-    .instruction_writeback_data_1_i(tb_instruction_writeback_data_1_i),
-    .instruction_writeback_2_i(tb_instruction_writeback_2_i),
-    .instruction_writeback_enable_2_i(tb_instruction_writeback_enable_2_i),
-    .instruction_writeback_data_2_i(tb_instruction_writeback_data_2_i),
+    .instruction_S_i(tb_instruction_S_i),
+    .read_head_S_i(tb_read_head_S_i),
+    .instruction_writeback_i({tb_instruction_writeback_1_i,tb_instruction_writeback_2_i}),
+    .instruction_writeback_enable_i({tb_instruction_writeback_enable_1_i,tb_instruction_writeback_enable_2_i}),
+    .instruction_writeback_data_i({tb_instruction_writeback_data_1_i,tb_instruction_writeback_data_2_i}),
     .flush_i(tb_flush_i),
     .flush_index_i(tb_flush_index_i),
     .flush_commit_i(tb_flush_commit_i),
-    .assigned_gl_entry_o(tb_assigned_gl_entry_o),
+    .assigned_gl_entry_o(tb_assigned_gl_entsry_o),
     .instruction_o(tb_instruction_o),
     .commit_gl_entry_o(tb_commit_gl_entry_o),
     .full_o(tb_full_o),
@@ -118,8 +115,8 @@ graduation_list module_inst (
             $display("*** init_sim");
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
-            tb_instruction_i <= '{default: 0};
-            tb_read_head_i <= '{default:0};
+            tb_instruction_S_i <= '{default: 0};
+            tb_read_head_S_i <= '{default:0};
             tb_instruction_writeback_1_i <= '{default:0};
             tb_instruction_writeback_enable_1_i <= '{default:0};
             tb_instruction_writeback_data_1_i <= '{default:0};
@@ -198,7 +195,8 @@ graduation_list module_inst (
     task automatic test_sim_1;
         output int tmp;
         begin
-            tb_read_head_i <= 1'b1;
+            tb_read_head_S_i[0] <= 1'b1;
+            tb_read_head_S_i[1] <= 1'b1;
             #CLK_PERIOD;
             assert(tb_full_o == 1'b0) else begin tmp++; assert(1 == 0); end
             assert(tb_empty_o == 1'b1) else begin tmp++; assert(1 == 0); end
@@ -210,14 +208,15 @@ graduation_list module_inst (
     task automatic test_sim_2;
         output int tmp;
         begin
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i[0] <= 1'b0;
+            tb_read_head_S_i[1] <= 1'b0;
             #CLK_PERIOD;
 
             // Now let's fill this with instructions
             for(int i = 0; i < GL_ENTRIES; ++i) begin
                 assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
-                tb_instruction_i = {   
+                tb_instruction_S_i[0] = {   
                     1'b1,                   // Valid instruction
                     addrPC_t'(i),           // PC of the instruction
                     instr_type_t'(1),       // Type of instruction
@@ -231,7 +230,20 @@ graduation_list module_inst (
                     phreg_t'(1),            // Physical register destination to write      
                     phreg_t'(1)             // Old Physical register destination  
                 };
-
+                tb_instruction_S_i[1] = {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(i),           // PC of the instruction
+                    instr_type_t'(1),       // Type of instruction
+                    reg_t'(1),              // Destination Register
+                    reg_t'(1),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(1),            // Physical register destination to write      
+                    phreg_t'(1)             // Old Physical register destination  
+                };
                 assert(tb_assigned_gl_entry_o == gl_index_t'(i)) else begin tmp++; assert(1 == 0); end
                 #CLK_PERIOD;
             end
@@ -239,18 +251,21 @@ graduation_list module_inst (
             assert(tb_full_o == 1) else begin tmp++; assert(1 == 0); end
             
             // Disable writing
-            tb_instruction_i.valid = 1'b0;
+            tb_instruction_S_i[0].valid = 1'b0;
+            tb_instruction_S_i[1].valid = 1'b0;
             #CLK_PERIOD;
 
             // Enable reading
-            tb_read_head_i <= 1'b1;
+            tb_read_head_S_i[0] <= 1'b1;
+            tb_read_head_S_i[1] <= 1'b1;
             #CLK_PERIOD;
             
             // We do the assertions one cycle after 
             // We haven't marked it as valid so no instructions should be outputed
             assert(tb_instruction_o.valid == 0) else begin tmp++; assert(1 == 0); end
             
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i[0] <= 1'b0;
+            tb_read_head_S_i[1] <= 1'b0;
             #CLK_PERIOD;
             
             // Mark everything as finished using two ports 
@@ -295,7 +310,8 @@ graduation_list module_inst (
             tb_instruction_writeback_enable_2_i <= 1'b0;
 
             // Enable reading
-            tb_read_head_i <= 1'b1;
+            tb_read_head_S_i[0] <= 1'b1;
+            tb_read_head_S_i[1] <= 1'b0;
             #CLK_PERIOD;
 
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
@@ -322,14 +338,15 @@ graduation_list module_inst (
     task automatic test_sim_3;
         output int tmp;
         begin
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i[0] <= 1'b0;
+            tb_read_head_S_i[1] <= 1'b0;
             #CLK_PERIOD;
 
             // Now let's fill this with instructions
             for(int i = 0; i < GL_ENTRIES; ++i) begin
                 assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
-                tb_instruction_i = {   
+                tb_instruction_S_i[0] = {   
                     1'b1,                   // Valid instruction
                     addrPC_t'(i),           // PC of the instruction
                     instr_type_t'(1),       // Type of instruction
@@ -343,7 +360,20 @@ graduation_list module_inst (
                     phreg_t'(1),            // Physical register destination to write      
                     phreg_t'(1)             // Old Physical register destination  
                 };
-
+                tb_instruction_S_i[1] = {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(i),           // PC of the instruction
+                    instr_type_t'(1),       // Type of instruction
+                    reg_t'(1),              // Destination Register
+                    reg_t'(1),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(1),            // Physical register destination to write      
+                    phreg_t'(1)             // Old Physical register destination  
+                };
                 assert(tb_assigned_gl_entry_o == gl_index_t'(i)) else begin tmp++; assert(1 == 0); end
                 #CLK_PERIOD;
             end
@@ -351,18 +381,22 @@ graduation_list module_inst (
             assert(tb_full_o == 1) else begin tmp++; assert(1 == 0); end
             
             // Disable writing
-            tb_instruction_i.valid = 1'b0;
+            tb_instruction_S_i[0].valid = 1'b0;
+            tb_instruction_S_i[1].valid = 1'b0;
             #CLK_PERIOD;
 
+
             // Enable reading
-            tb_read_head_i <= 1'b1;
+            tb_read_head_S_i[0] <= 1'b1;
+            tb_read_head_S_i[1] <= 1'b1;
+
             #CLK_PERIOD;
             
             // We do the assertions one cycle after 
             // We haven't marked it as valid so no instructions should be outputed
             assert(tb_instruction_o.valid == 0) else begin tmp++; assert(1 == 0); end
-            
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i[0] <= 1'b0;
+            tb_read_head_S_i[1] <= 1'b0;
             #CLK_PERIOD;
             
             // Mark everything as finished using two ports 
@@ -414,7 +448,8 @@ graduation_list module_inst (
             tb_instruction_writeback_enable_2_i <= 1'b0;
 
             // Enable reading
-            tb_read_head_i <= 1'b1;
+            tb_read_head_S_i[0] <= 1'b1;
+            tb_read_head_S_i[1] <= 1'b1;
             #CLK_PERIOD;
 
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
@@ -444,14 +479,29 @@ graduation_list module_inst (
     task automatic test_sim_4;
         output int tmp;
         begin
-            tb_read_head_i <= 1'b0;
+            tb_read_head_S_i[0] <= 1'b0;
+            tb_read_head_S_i[1] <= 1'b0;
             #CLK_PERIOD;
 
             // Now let's fill this with instructions
             for(int i = 0; i < GL_ENTRIES; ++i) begin
                 assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
-                tb_instruction_i = {   
+                tb_instruction_S_i[0] = {   
+                    1'b1,                   // Valid instruction
+                    addrPC_t'(i),           // PC of the instruction
+                    instr_type_t'(1),       // Type of instruction
+                    reg_t'(1),              // Destination Register
+                    reg_t'(1),              // Source register 1
+                    reg_csr_addr_t'(0),     // CSR Address
+                    exception_t'(0),        // Exceptions
+                    bus64_t'(0),            // Exception data or CSR data
+                    1'b0,                   // CSR or fence
+                    1'b0,                   // Write to register file                    
+                    phreg_t'(1),            // Physical register destination to write      
+                    phreg_t'(1)             // Old Physical register destination  
+                };
+                tb_instruction_S_i[1] = {   
                     1'b1,                   // Valid instruction
                     addrPC_t'(i),           // PC of the instruction
                     instr_type_t'(1),       // Type of instruction
@@ -473,9 +523,11 @@ graduation_list module_inst (
             assert(tb_full_o == 1) else begin tmp++; assert(1 == 0); end
             
             // Disable writing
-            tb_instruction_i.valid = 1'b0;
+            tb_instruction_S_i[0].valid = 1'b0;
+            tb_instruction_S_i[1].valid = 1'b0;
             #CLK_PERIOD;
 
+           
             tb_flush_commit_i <= 1'b1;
             #CLK_PERIOD;
 
