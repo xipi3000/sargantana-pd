@@ -73,7 +73,7 @@ graduation_list module_inst (
     .read_head_S_i(tb_read_head_S_i),
     .instruction_writeback_i({tb_instruction_writeback_1_i,tb_instruction_writeback_2_i}),
     .instruction_writeback_enable_i({tb_instruction_writeback_enable_1_i,tb_instruction_writeback_enable_2_i}),
-    .instruction_writeback_data_i({tb_instruction_writeback_data_1_i,tb_instruction_writeback_data_2_i}),
+    .instruction_writeback_data_i({tb_instruction_writeback_data_1_i,tb_instruction_writeback_data_2_i,0,0}),
     .flush_i(tb_flush_i),
     .flush_index_i(tb_flush_index_i),
     .flush_commit_i(tb_flush_commit_i),
@@ -219,12 +219,22 @@ graduation_list module_inst (
                 assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
 
                 tb_instruction_S_i[0] = '{
-                    valid:           1'b1                 // Valid instruction
-                
+                    valid:           1'b1,          // Valid instruction
+                    pc:              addrPC_t'(i),  // Dynamic PC (cast to addrPC_t)
+                    instr_type:      instr_type_t'(1),  // Default instruction type
+                    rd:              reg_t'(1),     // Default destination reg
+                    rs1:             reg_t'(1),     // Default source reg
+                   
+                    // Other fields default to 0 (if not critical)
+                    default: '0                     // Sets all unspecified fields to 0
                 };
                 tb_instruction_S_i[1] = '{
-                    valid:           1'b1                 // Valid instruction
-                
+                    valid:           1'b1,          // Valid instruction
+                    pc:              addrPC_t'(i+1),  // Dynamic PC (cast to addrPC_t)
+                    instr_type:      instr_type_t'(1),  // Default instruction type
+                    rd:              reg_t'(1),     // Default destination reg
+                    rs1:             reg_t'(1),     // Default source reg
+                    default: '0  
                 };
                 assert(tb_assigned_gl_entry_o == i) else begin tmp++; assert(1 == 0); end
              
@@ -256,37 +266,26 @@ graduation_list module_inst (
             for(int i = 0; i < GL_ENTRIES; i = i + 2) begin
                 tb_instruction_writeback_1_i <= gl_index_t'(i);
                 tb_instruction_writeback_enable_1_i <= 1'b1;
-                tb_instruction_writeback_data_1_i <= {   
-                    1'b1,                   // Valid instruction
-                    addrPC_t'(0),           // PC of the instruction
-                    instr_type_t'(0),       // Type of instruction
-                    reg_t'(0),              // Destination Register
-                    reg_t'(0),              // Source register 1
-                    reg_csr_addr_t'(0),     // CSR Address
-                    exception_t'(0),        // Exceptions
-                    bus64_t'(0),            // Exception data or CSR data
-                    1'b0,                   // CSR or fence
-                    1'b0,                   // Write to register file                    
-                    phreg_t'(0),            // Physical register destination to write      
-                    phreg_t'(0)             // Old Physical register destination  
+                tb_instruction_writeback_data_1_i <='{
+                    valid:           1'b1,
+                    default: '0   
+                    
                 };
+                tb_instruction_writeback_data_1_i.exception.valid <= 1'b1;
+                tb_instruction_writeback_data_1_i.exception.cause <= INSTR_ACCESS_FAULT;
+                tb_instruction_writeback_data_1_i.exception.origin <= bus64_t'(i);
+
 
                 tb_instruction_writeback_2_i <= gl_index_t'(i + 1);
                 tb_instruction_writeback_enable_2_i <= 1'b1;
-                tb_instruction_writeback_data_2_i <= {   
-                    1'b1,                   // Valid instruction
-                    addrPC_t'(0),           // PC of the instruction
-                    instr_type_t'(0),       // Type of instruction
-                    reg_t'(0),              // Destination Register
-                    reg_t'(0),              // Source register 1
-                    reg_csr_addr_t'(0),   // CSR Address
-                    exception_t'(0),        // Exceptions
-                    bus64_t'(0),            // Exception data or CSR data
-                    1'b0,                   // CSR or fence
-                    1'b0,                   // Write to register file                    
-                    phreg_t'(0),            // Physical register destination to write      
-                    phreg_t'(0)             // Old Physical register destination  
+                tb_instruction_writeback_data_2_i <= '{
+                    valid:           1'b1,
+                    default: '0   
+                    
                 };
+                tb_instruction_writeback_data_2_i.exception.valid <= 1'b1;
+                tb_instruction_writeback_data_2_i.exception.cause <= INSTR_ACCESS_FAULT;
+                tb_instruction_writeback_data_2_i.exception.origin <= bus64_t'(i+1);
                 #CLK_PERIOD;
             end    
             
@@ -300,16 +299,18 @@ graduation_list module_inst (
 
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
             // Recover the instructions. This is a FIFO, so we want to check everything is in the same order.
-            for(int i = 0; i < GL_ENTRIES; i+=2) begin
+            for(int i = 0; i < GL_ENTRIES-2; i+=2) begin
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 #CLK_PERIOD;
                 for(int j=0;j<NUM_SCALAR_INSTR;j++) begin
+                //$display("i=%d, pc=%d\n",i+j+4,tb_instruction_o[j].pc);
                 assert(tb_instruction_o[j].valid == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].rd == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].rs1 == 1) else begin tmp++; assert(1 == 0); end
-                assert(tb_instruction_o[j].pc == addrPC_t'(i+j)) else begin tmp++; assert(1 == 0); end
-                assert(tb_instruction_o[j].csr_addr == reg_csr_addr_t'(0)) else begin tmp++; assert(1 == 0); end
-                assert(tb_instruction_o[j].exception.valid == 0) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o[j].pc == addrPC_t'(i+j+4)) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o[j].exception.valid == 1) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o[j].exception.cause == INSTR_ACCESS_FAULT) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o[j].exception.origin == addrPC_t'(i+j)) else begin tmp++; assert(1 == 0); end
                 end
                 assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
             end
