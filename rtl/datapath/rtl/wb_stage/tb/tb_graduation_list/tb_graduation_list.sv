@@ -45,7 +45,7 @@ module tb_graduation_list();
 logic                           tb_clk_i;
 logic                           tb_rstn_i;
 gl_instruction_t                tb_instruction_S_i[NUM_SCALAR_INSTR];
-logic[0:1]                      tb_read_head_S_i[NUM_SCALAR_INSTR];
+logic[0:1]                      tb_read_head_S_i;
 gl_index_t                      tb_instruction_writeback_1_i;
 logic                           tb_instruction_writeback_enable_1_i;
 gl_instruction_t                tb_instruction_writeback_data_1_i;
@@ -227,7 +227,7 @@ graduation_list module_inst (
                 
                 };
                 assert(tb_assigned_gl_entry_o == i) else begin tmp++; assert(1 == 0); end
-                
+             
                 #CLK_PERIOD;
             end
 

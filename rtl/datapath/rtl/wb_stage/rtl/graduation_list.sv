@@ -35,7 +35,7 @@ module graduation_list
     input exception_t                          ex_i,
 
     // Read Entry Interface
-    input logic [1:0]                          read_head_S_i[NUM_SCALAR_INSTR],                       // Read oldest instruction
+    input logic [1:0]                          read_head_S_i,                       // Read oldest instruction
 
     // Write Back Interface
     input gl_index_t       [NUM_SCALAR_WB-1:0] instruction_writeback_i,           // Mark instruction as finished
@@ -78,7 +78,7 @@ gl_index_t tail;
 //Num must be 1 bit bigger than head and tail
 logic [num_bits_index:0] num;
 
-logic write_enable_S[NUM_SCALAR_INSTR];
+logic [NUM_SCALAR_INSTR-1:0]write_enable_S;
 logic [1:0] read_enable_S;
 
 logic is_store_or_amo_S[NUM_SCALAR_INSTR];
@@ -93,17 +93,15 @@ exception_t     exception_q;              // Exceptions
 gl_index_t      exception_index_q;
 bus64_t         result_q;                 // Result or immediate
 
+assign read_enable_S = ({1'b0,read_head_S_i[1]} + {1'b0,read_head_S_i[0]}) * ((int'(num) > NUM_ENTRIES-1) * ~(flush_i) * (~flush_commit_i));
+assign write_enable_S = {instruction_S_i[1].valid,instruction_S_i[0].valid} * (int'(num) < NUM_ENTRIES-1) * ~(flush_i) * (~flush_commit_i); 
 
 always_comb begin
     for(int i =0;i<NUM_SCALAR_INSTR;i++)begin
 
     // User can write to the head of the buffer if the new data is valid and
     // there are any free entry
-    write_enable_S[i] = instruction_S_i[i].valid & (int'(num) < NUM_ENTRIES-1) & ~(flush_i) & (~flush_commit_i); 
-
-    // User can read the head of the buffer if there is data stored in the queue
-    // or in this cycle a new entry is written
-    read_enable_S[i] = {1'b0,read_head_S_i[i][1]} + {1'b0,read_head_S_i[i][0]}; // & (num > 0) & (valid_bit[head]) & ~(flush_i) & (~flush_commit_i);
+  // or in this cycle a new entry is written
     is_store_or_amo_S[i] = (instruction_S_i[i].mem_type == STORE) || (instruction_S_i[i].mem_type == AMO);
     end
 end
@@ -215,11 +213,9 @@ begin
             num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-2{1'b0}}, read_enable_S[0]}+ {{num_bits_index-2{1'b0}}, read_enable_S[1]})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
         end
     end else begin
-        for(int i =0;i<NUM_SCALAR_INSTR;i++)begin
-            tail = tail + {{num_bits_index-1{1'b0}}, write_enable_S[i]};
-            head = head + {{num_bits_index-2{1'b0}}, read_enable_S[i]};
-            num  = num + {{num_bits_index-1{1'b0}}, write_enable_S[i]} - {{num_bits_index-2{1'b0}}, read_enable_S[i]};
-        end
+        tail <= tail + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]};
+        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S};
+        num  <= num + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]} - {{num_bits_index-2{1'b0}}, read_enable_S};   
     end
 end
 
@@ -243,7 +239,7 @@ end
 
 assign assigned_gl_entry_o = tail;
 assign empty_o = (num == 0);
-assign full_o  = (int'(num) == NUM_ENTRIES-1);
+assign full_o  = (int'(num) >= NUM_ENTRIES-1);
 assign result_o = result_q;
 assign exception_o = exception_q;
 assign csr_addr_o = csr_addr_q;
