@@ -93,7 +93,7 @@ exception_t     exception_q;              // Exceptions
 gl_index_t      exception_index_q;
 bus64_t         result_q;                 // Result or immediate
 
-assign read_enable_S = ({1'b0,read_head_S_i[1]} + {1'b0,read_head_S_i[0]}) * ((int'(num) > 2) * ~(flush_i) * (~flush_commit_i));
+assign read_enable_S = ({1'b0,read_head_S_i[1]} + {1'b0,read_head_S_i[0]}) * ((int'(num) > 0) * ~(flush_i) * (~flush_commit_i));
 assign write_enable_S = {instruction_S_i[1].valid,instruction_S_i[0].valid} * (int'(num) < NUM_ENTRIES-1) * ~(flush_i) * (~flush_commit_i); 
 
 always_comb begin
@@ -213,9 +213,9 @@ begin
             num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-2{1'b0}}, read_enable_S[0]}+ {{num_bits_index-2{1'b0}}, read_enable_S[1]})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
         end
     end else begin
-        tail <= tail + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]};
-        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S};
-        num  <= num + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]} - {{num_bits_index-2{1'b0}}, read_enable_S};   
+        tail <= tail + ({{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]});
+        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S}  * (valid_bit[head] * valid_bit[head+1]) ;
+        num  <= num + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]} - ({{num_bits_index-2{1'b0}}, read_enable_S} * (valid_bit[head] * valid_bit[head+1]));   
     end
 end
 

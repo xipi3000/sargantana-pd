@@ -48,10 +48,12 @@ gl_instruction_t                tb_instruction_S_i[NUM_SCALAR_INSTR];
 logic[0:1]                      tb_read_head_S_i;
 gl_index_t                      tb_instruction_writeback_1_i;
 logic                           tb_instruction_writeback_enable_1_i;
-gl_instruction_t                tb_instruction_writeback_data_1_i;
+gl_wb_data_t                tb_instruction_writeback_data_1_i;
 gl_index_t                      tb_instruction_writeback_2_i;
 logic                           tb_instruction_writeback_enable_2_i;
-gl_instruction_t                tb_instruction_writeback_data_2_i;
+gl_wb_data_t                tb_instruction_writeback_data_2_i;
+gl_wb_data_t                tb_instruction_writeback_data_3_i;
+gl_wb_data_t                tb_instruction_writeback_data_4_i;
 gl_index_t                      tb_assigned_gl_entry_o;
 gl_index_t                      tb_commit_gl_entry_o;
 gl_instruction_t   [1:0]             tb_instruction_o;
@@ -71,9 +73,9 @@ graduation_list module_inst (
     .rstn_i(tb_rstn_i),
     .instruction_S_i(tb_instruction_S_i),
     .read_head_S_i(tb_read_head_S_i),
-    .instruction_writeback_i({tb_instruction_writeback_1_i,tb_instruction_writeback_2_i}),
+    .instruction_writeback_i({0,0,tb_instruction_writeback_2_i,tb_instruction_writeback_1_i}),
     .instruction_writeback_enable_i({tb_instruction_writeback_enable_1_i,tb_instruction_writeback_enable_2_i}),
-    .instruction_writeback_data_i({tb_instruction_writeback_data_1_i,tb_instruction_writeback_data_2_i,0,0}),
+    .instruction_writeback_data_i({'0,'0,tb_instruction_writeback_data_2_i,tb_instruction_writeback_data_1_i}),
     .flush_i(tb_flush_i),
     .flush_index_i(tb_flush_index_i),
     .flush_commit_i(tb_flush_commit_i),
@@ -266,25 +268,23 @@ graduation_list module_inst (
             for(int i = 0; i < GL_ENTRIES; i = i + 2) begin
                 tb_instruction_writeback_1_i <= gl_index_t'(i);
                 tb_instruction_writeback_enable_1_i <= 1'b1;
-                tb_instruction_writeback_data_1_i <='{
-                    valid:           1'b1,
-                    default: '0   
-                    
+                tb_instruction_writeback_data_1_i <= '{
+                    exception: '{
+                        valid: 1'b1,
+                        cause: exception_cause_t'(1),  // or riscv_pkg::INSTR_ACCESS_FAULT
+                        origin: bus64_t'(i)
+                    },
+                    default: '0
                 };
-                tb_instruction_writeback_data_1_i.exception.valid <= 1'b1;
-                tb_instruction_writeback_data_1_i.exception.cause <= INSTR_ACCESS_FAULT;
-                tb_instruction_writeback_data_1_i.exception.origin <= bus64_t'(i);
-
-
                 tb_instruction_writeback_2_i <= gl_index_t'(i + 1);
                 tb_instruction_writeback_enable_2_i <= 1'b1;
                 tb_instruction_writeback_data_2_i <= '{
-                    valid:           1'b1,
+                   
                     default: '0   
                     
                 };
                 tb_instruction_writeback_data_2_i.exception.valid <= 1'b1;
-                tb_instruction_writeback_data_2_i.exception.cause <= INSTR_ACCESS_FAULT;
+                tb_instruction_writeback_data_2_i.exception.cause <= exception_cause_t'(1);
                 tb_instruction_writeback_data_2_i.exception.origin <= bus64_t'(i+1);
                 #CLK_PERIOD;
             end    
@@ -299,22 +299,24 @@ graduation_list module_inst (
 
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
             // Recover the instructions. This is a FIFO, so we want to check everything is in the same order.
-            for(int i = 0; i < GL_ENTRIES-2; i+=2) begin
+            for(int i = 0; i < GL_ENTRIES; i+=2) begin
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-                #CLK_PERIOD;
+                
                 for(int j=0;j<NUM_SCALAR_INSTR;j++) begin
-                //$display("i=%d, pc=%d\n",i+j+4,tb_instruction_o[j].pc);
+                //$display("i=%s\n",tb_instruction_o[j].exception.valid);
                 assert(tb_instruction_o[j].valid == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].rd == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].rs1 == 1) else begin tmp++; assert(1 == 0); end
-                assert(tb_instruction_o[j].pc == addrPC_t'(i+j+4)) else begin tmp++; assert(1 == 0); end
+                assert(tb_instruction_o[j].pc == addrPC_t'(i+j)) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].exception.valid == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].exception.cause == INSTR_ACCESS_FAULT) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].exception.origin == addrPC_t'(i+j)) else begin tmp++; assert(1 == 0); end
                 end
+                #CLK_PERIOD;
                 assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
+                
             end
-
+            #CLK_PERIOD;
             assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
         end
     endtask
