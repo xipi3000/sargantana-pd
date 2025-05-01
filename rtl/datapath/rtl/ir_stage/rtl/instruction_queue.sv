@@ -33,6 +33,8 @@ module instruction_queue
     output logic           empty_o           // IQ is empty TODO: check if empty signal is necessary
 );
 
+//TODO!: if second instr reads the same reg as the first not make it go through the pipeline
+
 typedef logic [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] instruction_queue_entry;
 typedef reg [$clog2(INSTRUCTION_QUEUE_NUM_ENTRIES)-1:0] reg_instruction_queue_entry;
 
@@ -90,7 +92,6 @@ begin
     end
 end
 
-//TODO: Beware!! This head-1 will make errors if no instruction 2 is on the instrucition queue
 
 assign instruction_S_o[0] = empty_o ? 'h0 :  instruction_buffer[head-read_enable_S[0]];
 assign instruction_S_o[1] = empty_o ? 'h0 : instruction_buffer[head];
