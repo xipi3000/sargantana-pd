@@ -5,10 +5,10 @@ add wave -noupdate -expand -group Regfile /tb_regfile/tb_clk_i
 add wave -noupdate -expand -group Regfile /tb_regfile/tb_write_enable_i
 add wave -noupdate -expand -group Regfile /tb_regfile/tb_write_addr_i
 add wave -noupdate -expand -group Regfile /tb_regfile/tb_write_data_i
-add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_addr1_i
-add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_addr2_i
-add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_data1_o
-add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_data2_o
+add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_addr1_S_i
+add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_addr2_S_i
+add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_data1_S_o
+add wave -noupdate -expand -group Regfile /tb_regfile/tb_read_data2_S_o
 add wave -noupdate -expand /tb_regfile/regfile_inst/registers
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {0 ns} 0}

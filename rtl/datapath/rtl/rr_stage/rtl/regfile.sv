@@ -29,55 +29,58 @@ module regfile
     input   bus64_t [NUM_SCALAR_WB-1:0] write_data_i,
 
     // read ports input
-    input   phreg_t                               read_addr1_i,
-    input   phreg_t                               read_addr2_i,
+    input   phreg_t [NUM_SCALAR_INSTR-1:0]        read_addr1_S_i,
+    input   phreg_t [NUM_SCALAR_INSTR-1:0]        read_addr2_S_i,
     // read port output
-    output  bus64_t                               read_data1_o,
-    output  bus64_t                               read_data2_o
+    output  bus64_t [NUM_SCALAR_INSTR-1:0]        read_data1_S_o,
+    output  bus64_t [NUM_SCALAR_INSTR-1:0]        read_data2_S_o
 
 ); 
 // reg 0 should be 0 why waste 1 register for this...
 reg64_t registers [1:NUM_PHISICAL_REGISTERS-1];
-bus64_t bypass_data1;
-bus64_t bypass_data2;
-logic   bypass1;
-logic   bypass2;
+bus64_t [NUM_SCALAR_INSTR-1:0] bypass_data1_S;
+bus64_t [NUM_SCALAR_INSTR-1:0] bypass_data2_S;
+logic   [NUM_SCALAR_INSTR-1:0] bypass1_S;
+logic   [NUM_SCALAR_INSTR-1:0] bypass2_S;
 
 // these assigns select data of register at position x 
 // if x = 0 then return 0
 
 always_comb begin
-    bypass_data1 = 64'b0;
-    bypass_data2 = 64'b0;
-    bypass1 = 1'b0;
-    bypass2 = 1'b0;
+    bypass_data1_S = '{default:64'b0};
+    bypass_data2_S = '{default:64'b0};
+    bypass1_S = '{default:1'b0};
+    bypass2_S = '{default:1'b0};
 
     for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-        if (write_addr_i[i] == read_addr1_i && write_enable_i[i]) begin
-            bypass_data1 |= write_data_i[i];
-            bypass1      |= 1'b1;
-        end
+        for(int  j =0; j<NUM_SCALAR_INSTR; j++) begin
+            if (write_addr_i[i] == read_addr1_S_i[j] && write_enable_i[i]) begin
+                bypass_data1_S[j] |= write_data_i[i];
+                bypass1_S[j]      |= 1'b1;
+            end
 
-        if (write_addr_i[i] == read_addr2_i && write_enable_i[i]) begin
-            bypass_data2 |= write_data_i[i];
-            bypass2      |= 1'b1;
+            if (write_addr_i[i] == read_addr2_S_i[j] && write_enable_i[i]) begin
+                bypass_data2_S[j] |= write_data_i[i];
+                bypass2_S[j]      |= 1'b1;
+            end
         end
     end
-
-    if (read_addr1_i == 0) begin
-        read_data1_o = 64'b0;
-    end else if (bypass1) begin
-        read_data1_o = bypass_data1;
-    end else begin
-        read_data1_o = registers[read_addr1_i];
-    end
-
-    if (read_addr2_i == 0) begin
-        read_data2_o = 64'b0;
-    end else if (bypass2) begin
-        read_data2_o = bypass_data2;
-    end else begin
-        read_data2_o = registers[read_addr2_i];
+    for(int i=0; i<NUM_SCALAR_INSTR;i++) begin
+        if (read_addr1_S_i[i] == 0) begin
+            read_data1_S_o[i] = 64'b0;
+        end else if (bypass1_S[i]) begin
+            read_data1_S_o[i] = bypass_data1_S[i];
+        end else begin
+                read_data1_S_o[i] = registers[read_addr1_S_i[i]];
+        end
+        
+        if (read_addr2_S_i[i] == 0) begin
+            read_data2_S_o[i] = 64'b0;
+        end else if (bypass2_S[i]) begin
+            read_data2_S_o[i] = bypass_data2_S[i];
+        end else begin
+            read_data2_S_o[i] = registers[read_addr2_S_i[i]];
+        end
     end
 end
 

@@ -12,7 +12,7 @@ rm -rf lib_module
 
 vlib lib_module
 vmap work $PWD/lib_module
-vlog $VLOG_FLAGS +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv $INCLUDES/drac_pkg.sv\
+vlog +acc=rn +incdir+ $INCLUDES/riscv_pkg.sv  $INCLUDES/fpuv_pkg.sv $INCLUDES/drac_pkg.sv\
  $RR_STAGE/regfile.sv  tb_regfile.sv colors.vh
 vmake lib_module/ > Makefile
 
