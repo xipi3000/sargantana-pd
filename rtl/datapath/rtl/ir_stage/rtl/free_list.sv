@@ -201,9 +201,9 @@ begin
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // When a register is freed increment tail
-        for(int i =0 ; i < NUM_SCALAR_INSTR; i++)begin
-            tail <= tail + write_enable_0_S[i] + write_enable_1_S[i];
-        end
+
+        tail <= tail + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
+
         
         //tail <= tail + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
         
