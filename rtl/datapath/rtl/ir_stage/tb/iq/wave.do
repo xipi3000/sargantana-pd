@@ -12,6 +12,7 @@ add wave -noupdate /tb_instruction_queue/instruction_queue_inst/tail
 add wave -noupdate /tb_instruction_queue/instruction_queue_inst/instruction_buffer
 add wave -noupdate /tb_instruction_queue/instruction_queue_inst/write_enable_S
 add wave -noupdate /tb_instruction_queue/instruction_queue_inst/read_enable_S
+add wave -noupdate /tb_instruction_queue/tmp
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {270 ns} 0}
 quietly wave cursor active 1

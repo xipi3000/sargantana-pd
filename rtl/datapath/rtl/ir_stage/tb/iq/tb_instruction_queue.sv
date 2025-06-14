@@ -149,10 +149,10 @@ module tb_instruction_queue();
                     default: '0
                 };
             end    
-            for(int i=0; i<INSTRUCTION_QUEUE_NUM_ENTRIES; i+=2) begin            // Reads 32 free registers
+            for(int i=0; i<16; i+=2) begin            // Reads 32 free registers
 
                 tick();
-                assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+                
                 assert(instruction_queue_inst.head == 3'h0)  else begin tmp++; assert(1 == 0); end
                 assert(instruction_queue_inst.tail == i) else begin tmp++; assert(1 == 0); end
                 assert(instruction_queue_inst.num == i) else begin tmp++; assert(1 == 0); end
@@ -163,8 +163,30 @@ module tb_instruction_queue();
 
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
             assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
-            assert(instruction_queue_inst.tail == 16) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
             assert(instruction_queue_inst.num == 16) else begin tmp++; assert(1 == 0); end
+            tb_instruction_S_i = {default:0};
+            tick(); 
+
+            tb_read_head_S_i= {1,1};
+
+            for(int i=0; i<16; i+=2) begin            // Reads 32 free registers
+
+                tick();
+                
+                assert(instruction_queue_inst.head == i)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.num == 16-i) else begin tmp++; assert(1 == 0); end
+               
+            end
+
+            tick();
+            assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.num == 0) else begin tmp++; assert(1 == 0); end
+
+
 
         end
     endtask
