@@ -26,7 +26,7 @@ module instruction_queue
 
     input id_ir_stage_t    instruction_S_i [NUM_SCALAR_INSTR],    // All instruction input signals   
     input logic            flush_i,          // Flush all entries to 0
-    input logic            read_head_i[NUM_SCALAR_INSTR],      // Read tail of the ciruclar buffer
+    input logic            read_head_S_i[NUM_SCALAR_INSTR],      // Read tail of the ciruclar buffer
 
     output id_ir_stage_t   instruction_S_o [NUM_SCALAR_INSTR],    // All intruction output signals
     output logic           full_o,           // IQ is full
@@ -53,10 +53,10 @@ logic read_enable_S[NUM_SCALAR_INSTR];
 // there are any free entry
 always_comb begin
     for(int i = 0; i<NUM_SCALAR_INSTR; i++) begin
-        write_enable_S[i] = instruction_S_i.instr[i].valid & (num < INSTRUCTION_QUEUE_NUM_ENTRIES-i);
+        write_enable_S[i] = instruction_S_i[i].instr.valid & (num < INSTRUCTION_QUEUE_NUM_ENTRIES-i);
     // User can read the tail of the buffer if there is data stored in the queue
     // or in this cycle a new entry is written
-        read_enable_S[i] = read_head_i & (num > 0+i);
+        read_enable_S[i] = read_head_S_i & (num > 0+i);
     end
 end
 

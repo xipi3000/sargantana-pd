@@ -372,6 +372,7 @@ typedef struct packed {
     exception_t ex;                     // Exceptions
 } id_ir_stage_t;
 
+
 typedef struct packed {
     instr_entry_t instr;                // Instruction
     exception_t ex;                     // Exceptions
@@ -393,6 +394,29 @@ typedef struct packed {
     logic checkpoint_done;              // It has a checkpoint
     checkpoint_ptr chkp;                // Checkpoint of branch  
 } ir_rr_stage_t;
+
+typedef struct packed {
+    instr_entry_t [1:0] instr_S;                // Instruction
+    exception_t [1:0] ex_S;                     // Exceptions
+    phreg_t [1:0] prs1_S;                       // Physical register source 1
+    logic  [1:0] rdy1_S;                       // Ready register source 1
+    phreg_t [1:0] prs2_S;                       // Physical register source 2
+    logic  [1:0] rdy2_S;                       // Ready register source 2 
+    phreg_t fprs1;                      // FP Physical register source 1
+    logic   frdy1;                      // FP Ready register source 1
+    phreg_t fprs2;                      // FP Physical register source 2
+    logic   frdy2;                      // FP Ready register source 2
+    phreg_t fprs3;                      // FP Physical register source 3
+    logic   frdy3;                      // FP Ready register source 3    
+    phreg_t [1:0] prd;                        // Physical register destination
+    phreg_t [1:0] old_prd;                    // Old Physical register destination
+    phreg_t fprd;                       // Physical register destination
+    phreg_t old_fprd;                   // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch  
+} ir_rr_stage_t_S;
+
 
 typedef struct packed {
     instr_entry_t instr;                // Instruction
@@ -599,9 +623,10 @@ typedef struct packed {
     logic do_recover;                      // Recover checkpoint
     checkpoint_ptr recover_checkpoint;     // Label of the checkpoint to recover   
     logic recover_commit;                  // Recover at Commit
-    logic [1:0] enable_commit_update;            // Enable update of Free List and Rename from commit
+    logic [1:0] enable_commit_update_S;            // Enable update of Free List and Rename from commit
     logic [1:0] fp_enable_commit_update;         // Enable update of FP Free List and Rename from commit
 } cu_ir_t;      // Control Unit to Rename
+
 
 typedef struct packed {
     logic [NUM_SCALAR_WB-1:0] write_enable; // Enable write on register file
