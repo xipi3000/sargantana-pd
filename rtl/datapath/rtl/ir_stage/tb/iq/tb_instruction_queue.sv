@@ -27,7 +27,7 @@
 
 import drac_pkg::*;
 
-module tb_free_list();
+module tb_instruction_queue();
 
 //-----------------------------
 // Local parameters
@@ -91,8 +91,8 @@ module tb_free_list();
             tb_clk_i <='{default:1};
             tb_rstn_i<='{default:0};
             tb_read_head_S_i<='{default:0};
-            flush_i<='{default:0};
-            instruction_S_i<='{default:0};
+            tb_flush_i<='{default:0};
+            tb_instruction_S_i<='{default:0};
             $display("Done");
         end
     endtask
@@ -104,7 +104,7 @@ module tb_free_list();
         begin
             $display("*** init_dump");
             $dumpfile("dump_file.vcd");
-            $dumpvars(0,instruction_queue);
+            $dumpvars(0,instruction_queue_inst);
         end
     endtask
 
@@ -123,9 +123,9 @@ module tb_free_list();
             tmp = 0;
             #CLK_PERIOD;
             assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue.head[0] == 0)  else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue.tail[0] == 0)  else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue.num[0] == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.head[0] == 0)  else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.tail[0] == 0)  else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.num[0] == 0) else begin tmp++; assert(1 == 0); end
     
             #CLK_PERIOD;
 
@@ -140,37 +140,31 @@ module tb_free_list();
         begin
             tick();
             for(int i = 0; i < NUM_SCALAR_INSTR; i++) begin
-                tb_instruction_S_i[i].instr <= {   
-                    1'b1,                   // Valid instruction
-                    addrPC_t'(0),           // PC of the instruction
-                    instr_type_t'(0),       // Type of instruction
-                    reg_t'(0),              // Destination Register
-                    reg_t'(0),              // Source register 1
-                    reg_csr_addr_t'(0),     // CSR Address
-                    exception_t'(0),        // Exceptions
-                    bus64_t'(0),            // Exception data or CSR data
-                    1'b0,                   // CSR or fence
-                    1'b0,                   // Write to register file                    
-                    phreg_t'(0),            // Physical register destination to write      
-                    phreg_t'(0)             // Old Physical register destination  
+                tb_instruction_S_i[i].instr = '{   
+                    valid: 1'b1,                   // Valid instruction
+                    pc: addrPC_t'(1),           // PC of the instruction
+                    instr_type: instr_type_t'(1),       // Type of instruction
+                    rd: reg_t'(1),              // Destination Register
+                    rs1: reg_t'(1),              // Source register 1
+                    default: '0
                 };
             end    
             for(int i=0; i<INSTRUCTION_QUEUE_NUM_ENTRIES; i+=2) begin            // Reads 32 free registers
 
                 tick();
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue.head == 3'h0)  else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue.tail == i) else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue.num == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.head == 3'h0)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.tail == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.num == i) else begin tmp++; assert(1 == 0); end
                
             end
 
             tick(); // Tries to read but is empty
 
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(free_list_inst.head == 0) else begin tmp++; assert(1 == 0); end          
-            assert(free_list_inst.tail == 16) else begin tmp++; assert(1 == 0); end
-            assert(free_list_inst.num == 16) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst.tail == 16) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.num == 16) else begin tmp++; assert(1 == 0); end
 
         end
     endtask

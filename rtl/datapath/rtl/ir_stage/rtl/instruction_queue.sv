@@ -56,7 +56,7 @@ always_comb begin
         write_enable_S[i] = instruction_S_i[i].instr.valid & (num < INSTRUCTION_QUEUE_NUM_ENTRIES-i);
     // User can read the tail of the buffer if there is data stored in the queue
     // or in this cycle a new entry is written
-        read_enable_S[i] = read_head_S_i & (num > 0+i);
+        read_enable_S[i] = read_head_S_i[i] & (num > 0+i);
     end
 end
 
