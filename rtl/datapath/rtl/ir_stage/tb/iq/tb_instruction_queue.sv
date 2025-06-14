@@ -186,11 +186,65 @@ module tb_instruction_queue();
             assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
             assert(instruction_queue_inst.num == 0) else begin tmp++; assert(1 == 0); end
 
+             tb_read_head_S_i= {0,0};
+
+        end
+    endtask
+    task automatic test_sim_3;
+        output int tmp;
+        begin
+            tick();
+            
+            tb_instruction_S_i[0].instr = '{   
+                valid: 1'b1,                   // Valid instruction
+                pc: addrPC_t'(1),           // PC of the instruction
+                instr_type: instr_type_t'(1),       // Type of instruction
+                rd: reg_t'(1),              // Destination Register
+                rs1: reg_t'(1),              // Source register 1
+                default: '0
+            };
+              
+            for(int i=0; i<16; i++) begin            // Reads 32 free registers
+
+                tick();
+                
+                assert(instruction_queue_inst.head == 3'h0)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.tail == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.num == i) else begin tmp++; assert(1 == 0); end
+               
+            end
+
+            tick(); // Tries to read but is empty
+
+            assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.num == 16) else begin tmp++; assert(1 == 0); end
+            tb_instruction_S_i = {default:0};
+            tick(); 
+
+            tb_read_head_S_i[0] = 1;
+
+            for(int i=0; i<16; i++) begin            // Reads 32 free registers
+
+                tick();
+                
+                assert(instruction_queue_inst.head == i)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst.num == 16-i) else begin tmp++; assert(1 == 0); end
+               
+            end
+
+            tick();
+            assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst.num == 0) else begin tmp++; assert(1 == 0); end
+
 
 
         end
     endtask
-
 //***task automatic test_sim***
     task automatic test_sim;
         begin
@@ -216,6 +270,17 @@ module tb_instruction_queue();
             end else begin
                 `START_GREEN_PRINT
                         $display("TEST 2 PASSED.");
+                `END_COLOR_PRINT
+            end
+
+            test_sim_3(tmp); 
+            if (tmp >= 1) begin
+                `START_RED_PRINT
+                        $display("TEST 3 FAILED.");
+                `END_COLOR_PRINT
+            end else begin
+                `START_GREEN_PRINT
+                        $display("TEST 3 PASSED.");
                 `END_COLOR_PRINT
             end
         end
