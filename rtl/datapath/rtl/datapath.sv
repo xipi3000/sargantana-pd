@@ -935,16 +935,19 @@ module datapath
             snoop_exe_data_frs3 |= snoop_exe_frs3[i] ? fp_data_wb_to_exe[i] : 64'b0;
         end
 
-        for (int i = 0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
-            exe_data_rs1 = snoop_exe_rs1[i] ? (snoop_exe_data_rs1_S[i]) : stage_rr_exe_q_Ss.data_rs1[i];
-            exe_data_rs2 = snoop_exe_rs2[i] ? (snoop_exe_data_rs2_S[i]) : stage_rr_exe_q_Ss.data_rs2[i];
-        end 
+        //snoop_exe_rdy1 = |snoop_exe_rs1;
+        //snoop_exe_rdy2 = |snoop_exe_rs2;
+        for (int i=0; i<NUM_SCALAR_INSTR; ++i) begin
+        exe_data_rs1[i] = snoop_exe_rs1[i] ? (snoop_exe_data_rs1_S[i]) : stage_rr_exe_q_Ss.data_rs1[i];
+        exe_data_rs2[i] = snoop_exe_rs2[i] ? (snoop_exe_data_rs2_S[i]) : stage_rr_exe_q_Ss.data_rs2[i];
+        
+        end
         snoop_exe_frdy1 = |snoop_exe_frs1;
         snoop_exe_frdy2 = |snoop_exe_frs2;
         snoop_exe_frdy3 = |snoop_exe_frs3;
-
-        exe_data_frs1 = snoop_exe_frdy1 ? (snoop_exe_data_frs1) : stage_rr_exe_q_Ss.data_rs1;
-        exe_data_frs2 = snoop_exe_frdy2 ? (snoop_exe_data_frs2) : stage_rr_exe_q_Ss.data_rs2;
+        //TODO: SELECT THE WAY WITH THE FP FOR REAL
+        exe_data_frs1 = snoop_exe_frdy1 ? (snoop_exe_data_frs1) : stage_rr_exe_q_Ss.data_rs1[0];
+        exe_data_frs2 = snoop_exe_frdy2 ? (snoop_exe_data_frs2) : stage_rr_exe_q_Ss.data_rs2[0];
         exe_data_frs3 = snoop_exe_frdy3 ? (snoop_exe_data_frs3) : stage_rr_exe_q_Ss.data_rs3;
     end
 
@@ -1053,7 +1056,7 @@ module datapath
         .ex_gl_index_o(ex_from_exe_index_int),
 
         .req_cpu_dcache_o(req_cpu_dcache_o),
-    
+
         //PMU Neiel-Leyva
         .pmu_is_branch_o          (pmu_flags_o.is_branch),      
         .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
