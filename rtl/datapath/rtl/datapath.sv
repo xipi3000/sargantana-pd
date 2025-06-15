@@ -200,8 +200,8 @@ module datapath
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] exe_to_wb_fp;
     exe_wb_fp_instr_t [drac_pkg::NUM_FP_WB-1:0] wb_fp;
 
-    bus64_t snoop_exe_data_rs1;
-    bus64_t snoop_exe_data_rs2;
+    bus64_t [NUM_SCALAR_WB-1:0] snoop_exe_data_rs1_S;
+    bus64_t [NUM_SCALAR_WB-1:0] snoop_exe_data_rs2_S;
     logic   [NUM_SCALAR_WB-1:0] snoop_exe_rs1;
     logic   [NUM_SCALAR_WB-1:0] snoop_exe_rs2;
     logic snoop_exe_rdy1;
@@ -224,7 +224,7 @@ module datapath
     bus64_t exe_data_frs2;
     bus64_t exe_data_frs3;
     rr_exe_instr_t_S reg_to_exe_Ss;
-
+    rr_exe_instr_t [NUM_SCALAR_INSTR:0] reg_to_exe_S;
     // This addresses are fixed from lowrisc
     reg_addr_t io_base_addr;
 
@@ -913,17 +913,17 @@ module datapath
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     always_comb begin
-        snoop_exe_data_rs1 = 64'b0;
-        snoop_exe_data_rs2 = 64'b0;
+        snoop_exe_data_rs1_S = {64'b0 ,64'b0};
+        snoop_exe_data_rs2_S = {64'b0 ,64'b0};
         snoop_exe_data_frs1 = 64'b0;
         snoop_exe_data_frs2 = 64'b0;
         snoop_exe_data_frs3 = 64'b0;
 
         for (int i = 0; i<drac_pkg::NUM_SCALAR_WB; ++i) begin
-            snoop_exe_rs1[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q_Ss.prs1) & (stage_rr_exe_q_Ss.instr.rs1 != 0);
-            snoop_exe_rs2[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q_Ss.prs2) & (stage_rr_exe_q_Ss.instr.rs2 != 0);
-            snoop_exe_data_rs1 |= snoop_exe_rs1[i] ? data_wb_to_exe[i] : 64'b0;
-            snoop_exe_data_rs2 |= snoop_exe_rs2[i] ? data_wb_to_exe[i] : 64'b0;
+            snoop_exe_rs1[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q_Ss.prs1[i]) & (stage_rr_exe_q_Ss.instr[i].rs1 != 0);
+            snoop_exe_rs2[i] = cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_rr_exe_q_Ss.prs2[i]) & (stage_rr_exe_q_Ss.instr[i].rs2 != 0);
+            snoop_exe_data_rs1_S[i] = snoop_exe_rs1[i] ? data_wb_to_exe[i] : 64'b0;
+            snoop_exe_data_rs2_S[i] = snoop_exe_rs2[i] ? data_wb_to_exe[i] : 64'b0;
         end
 
         for (int i = 0; i<drac_pkg::NUM_FP_WB; ++i) begin
@@ -935,11 +935,10 @@ module datapath
             snoop_exe_data_frs3 |= snoop_exe_frs3[i] ? fp_data_wb_to_exe[i] : 64'b0;
         end
 
-        snoop_exe_rdy1 = |snoop_exe_rs1;
-        snoop_exe_rdy2 = |snoop_exe_rs2;
-        exe_data_rs1 = snoop_exe_rdy1 ? (snoop_exe_data_rs1) : stage_rr_exe_q_Ss.data_rs1;
-        exe_data_rs2 = snoop_exe_rdy2 ? (snoop_exe_data_rs2) : stage_rr_exe_q_Ss.data_rs2;
-
+        for (int i = 0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
+            exe_data_rs1 = snoop_exe_rs1[i] ? (snoop_exe_data_rs1_S[i]) : stage_rr_exe_q_Ss.data_rs1[i];
+            exe_data_rs2 = snoop_exe_rs2[i] ? (snoop_exe_data_rs2_S[i]) : stage_rr_exe_q_Ss.data_rs2[i];
+        end 
         snoop_exe_frdy1 = |snoop_exe_frs1;
         snoop_exe_frdy2 = |snoop_exe_frs2;
         snoop_exe_frdy3 = |snoop_exe_frs3;
@@ -950,8 +949,10 @@ module datapath
     end
 
     assign reg_to_exe_Ss.instr = stage_rr_exe_q_Ss.instr;
-    assign reg_to_exe_Ss.data_rs1 = (stage_rr_exe_q_Ss.instr.use_fs1) ? exe_data_frs1 : exe_data_rs1;
-    assign reg_to_exe_Ss.data_rs2 = (stage_rr_exe_q_Ss.instr.use_fs2) ? exe_data_frs2 : exe_data_rs2;
+    assign reg_to_exe_Ss.data_rs1[0] = (stage_rr_exe_q_Ss.instr[0].use_fs1) ? exe_data_frs1 : exe_data_rs1[0];
+    assign reg_to_exe_Ss.data_rs2[0] = (stage_rr_exe_q_Ss.instr[0].use_fs2) ? exe_data_frs2 : exe_data_rs2[0];
+    assign reg_to_exe_Ss.data_rs1[1] = (stage_rr_exe_q_Ss.instr[1].use_fs1) ? exe_data_frs1 : exe_data_rs1[1];
+    assign reg_to_exe_Ss.data_rs2[1] = (stage_rr_exe_q_Ss.instr[1].use_fs2) ? exe_data_frs2 : exe_data_rs2[1];
     assign reg_to_exe_Ss.data_rs3 = exe_data_frs3;
     
     assign reg_to_exe_Ss.prs1 = stage_rr_exe_q_Ss.prs1;
@@ -974,6 +975,38 @@ module datapath
     assign reg_to_exe_Ss.chkp = stage_rr_exe_q_Ss.chkp;
     assign reg_to_exe_Ss.gl_index = stage_rr_exe_q_Ss.gl_index;
 
+    always_comb begin
+        for(int i =0; i<NUM_SCALAR_INSTR; i++) begin
+            reg_to_exe_S[i].instr = stage_rr_exe_q_Ss.instr[i];
+            reg_to_exe_S[i].data_rs1 = (stage_rr_exe_q_Ss.instr[i].use_fs1) ? exe_data_frs1 : exe_data_rs1[i];
+            reg_to_exe_S[i].data_rs2 = (stage_rr_exe_q_Ss.instr[i].use_fs2) ? exe_data_frs2 : exe_data_rs2[i];
+            reg_to_exe_S[i]s.data_rs3 = exe_data_frs3;
+            
+            reg_to_exe_S[i].prs1 = stage_rr_exe_q_Ss.prs1[i];
+            reg_to_exe_S[i].rdy1 = snoop_exe_rdy1 | stage_rr_exe_q_Ss.rdy1[i];
+            reg_to_exe_S[i].prs2 = stage_rr_exe_q_Ss.prs2[i];
+            reg_to_exe_S[i].rdy2 = snoop_exe_rdy2 | stage_rr_exe_q_Ss.rdy2[i];
+            reg_to_exe_S[i].prd = stage_rr_exe_q_Ss.prd[i];
+            reg_to_exe_S[i].old_prd = stage_rr_exe_q_Ss.old_prd[i];
+            
+            reg_to_exe_S[i].fprs1 = stage_rr_exe_q_Ss.fprs1;
+            reg_to_exe_S[i].frdy1 = snoop_exe_frdy1 | stage_rr_exe_q_Ss.frdy1;
+            reg_to_exe_S[i].fprs2 = stage_rr_exe_q_Ss.fprs2;
+            reg_to_exe_S[i].frdy2 = snoop_exe_frdy2 | stage_rr_exe_q_Ss.frdy2;
+            reg_to_exe_S[i].fprs3 = stage_rr_exe_q_Ss.fprs3;
+            reg_to_exe_S[i].frdy3 = snoop_exe_frdy3 | stage_rr_exe_q_Ss.frdy3;
+            reg_to_exe_S[i].fprd = stage_rr_exe_q_Ss.fprd;
+            reg_to_exe_S[i].old_fprd = stage_rr_exe_q_Ss.old_fprd;
+
+            reg_to_exe_S[i].checkpoint_done = stage_rr_exe_q_Ss.checkpoint_done;
+            reg_to_exe_S[i].chkp = stage_rr_exe_q_Ss.chkp;
+            reg_to_exe_S[i].gl_index = stage_rr_exe_q_Ss.gl_index;
+        end
+    end
+
+
+
+
     exe_stage exe_stage_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
@@ -982,7 +1015,7 @@ module datapath
 
         .en_ld_st_translation_i(en_ld_st_translation_i),
 
-        .from_rr_i(reg_to_exe_Ss),
+        .from_rr_i(reg_to_exe_S[0]),
         .sew_i(sew_i),
         
         .resp_dcache_cpu_i(resp_dcache_cpu_i),
@@ -1029,6 +1062,22 @@ module datapath
         .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
         .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
     );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
     register #( (NUM_SCALAR_WB) * $bits(exe_wb_scalar_instr_t) + (NUM_FP_WB) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
