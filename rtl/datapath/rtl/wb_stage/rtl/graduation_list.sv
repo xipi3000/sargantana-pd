@@ -29,13 +29,13 @@ module graduation_list
     input wire                                 rstn_i,                            // Negated Reset Signal
 
     // Input Signals of instruction from Read R
-    input gl_instruction_t                     instruction_i,
+    input gl_instruction_t                     instruction_S_i[NUM_SCALAR_INSTR],
     input logic                                is_csr_i,
     input reg_csr_addr_t                       csr_addr_i,
     input exception_t                          ex_i,
 
     // Read Entry Interface
-    input logic [1:0]                          read_head_i,                       // Read oldest instruction
+    input logic [1:0]                          read_head_S_i,                       // Read oldest instruction
 
     // Write Back Interface
     input gl_index_t       [NUM_SCALAR_WB-1:0] instruction_writeback_i,           // Mark instruction as finished
@@ -78,10 +78,10 @@ gl_index_t tail;
 //Num must be 1 bit bigger than head and tail
 logic [num_bits_index:0] num;
 
-logic write_enable;
-logic [1:0] read_enable;
+logic [NUM_SCALAR_INSTR-1:0]write_enable_S;
+logic [1:0] read_enable_S;
 
-logic is_store_or_amo;
+logic is_store_or_amo_S[NUM_SCALAR_INSTR];
 
 // Register for valid bit
 reg valid_bit [0:NUM_ENTRIES-1];
@@ -93,16 +93,18 @@ exception_t     exception_q;              // Exceptions
 gl_index_t      exception_index_q;
 bus64_t         result_q;                 // Result or immediate
 
-// User can write to the head of the buffer if the new data is valid and
-// there are any free entry
-assign write_enable = instruction_i.valid & (int'(num) < NUM_ENTRIES-1) & ~(flush_i) & (~flush_commit_i); 
+assign read_enable_S = ({1'b0,read_head_S_i[1]} + {1'b0,read_head_S_i[0]}) * ((int'(num) > 0) * ~(flush_i) * (~flush_commit_i));
+assign write_enable_S = {instruction_S_i[1].valid,instruction_S_i[0].valid} * (int'(num) < NUM_ENTRIES-1) * ~(flush_i) * (~flush_commit_i); 
 
-// User can read the head of the buffer if there is data stored in the queue
-// or in this cycle a new entry is written
-assign read_enable = {1'b0,read_head_i[1]} + {1'b0,read_head_i[0]}; // & (num > 0) & (valid_bit[head]) & ~(flush_i) & (~flush_commit_i);
+always_comb begin
+    for(int i =0;i<NUM_SCALAR_INSTR;i++)begin
 
-
-assign is_store_or_amo = (instruction_i.mem_type == STORE) || (instruction_i.mem_type == AMO);
+    // User can write to the head of the buffer if the new data is valid and
+    // there are any free entry
+  // or in this cycle a new entry is written
+    is_store_or_amo_S[i] = (instruction_S_i[i].mem_type == STORE) || (instruction_S_i[i].mem_type == AMO);
+    end
+end
 
 
 gl_instruction_t entries [0:NUM_ENTRIES-1];
@@ -124,20 +126,22 @@ begin
         result_q <= '0;
     end else begin
 
-        if (write_enable) begin
-            valid_bit[tail] <= is_store_or_amo | instruction_i.ex_valid;
-            entries[tail] <= instruction_i;
+        //TODO: not sure about exeptions
+        for(int i =0;i<NUM_SCALAR_INSTR;i++)begin
+            if (write_enable_S[i]) begin
+                valid_bit[tail+i] <= is_store_or_amo_S[i] | instruction_S_i[i].ex_valid;
+                entries[tail+i] <= instruction_S_i[i];
 
-            if (instruction_i.ex_valid && !exception_q.valid && !ex_from_exe_i.valid) begin
-                exception_q <= ex_i;
-                exception_index_q <= tail;
-            end
+                if (instruction_S_i[i].ex_valid && !exception_q.valid && !ex_from_exe_i.valid) begin
+                    exception_q <= ex_i;
+                    exception_index_q <= tail;
+                end
 
-            if(is_csr_i)begin
-                csr_addr_q <= csr_addr_i;
+                if(is_csr_i)begin
+                    csr_addr_q <= csr_addr_i;
+                end
             end
         end
-
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             if (instruction_writeback_enable_i[i]) begin
                 valid_bit[instruction_writeback_i[i]] <= 1'b1;
@@ -183,9 +187,9 @@ begin
             exception_q <= '0;
         end
 
-
         if (instruction_writeback_enable_i[0]) begin
             result_q <= instruction_writeback_data_i[0].result[63:0];
+
         end
     end
 end
@@ -202,25 +206,27 @@ begin
         num  <= {num_bits_index+1{1'b0}};
     end else if (flush_i & (num > 0)) begin
         tail <= flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}; 
-        head <= head + {{num_bits_index-2{1'b0}}, read_enable};
-        if ((flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-2{1'b0}}, read_enable}) && (int'(num) != NUM_ENTRIES)) begin   // Recompute number of entries
-            num <= {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{num_bits_index-2{1'b0}}, read_enable} )};
+        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S[0]}+ {{num_bits_index-2{1'b0}}, read_enable_S[1]};
+        if ((flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1}) >= (head + {{num_bits_index-2{1'b0}}, read_enable_S[0]}+ {{num_bits_index-2{1'b0}}, read_enable_S[1]}) && (int'(num) != NUM_ENTRIES)) begin   // Recompute number of entries
+            num <= {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})} - {1'b0 , (head + {{num_bits_index-2{1'b0}}, read_enable_S} )};
         end else begin
-            num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-2{1'b0}}, read_enable})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
+            num <= NUM_ENTRIES[num_bits_index:0] - {1'b0, (head + {{num_bits_index-2{1'b0}}, read_enable_S[0]}+ {{num_bits_index-2{1'b0}}, read_enable_S[1]})} +  {1'b0, (flush_index_i + {{num_bits_index-1{1'b0}}, 1'b1})};
         end
     end else begin
-        tail <= tail + {{num_bits_index-1{1'b0}}, write_enable};
-        head <= head + {{num_bits_index-2{1'b0}}, read_enable};
-        num  <= num + {{num_bits_index-1{1'b0}}, write_enable} - {{num_bits_index-2{1'b0}}, read_enable};
+        tail <= tail + ({{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]});
+        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S}  * (valid_bit[head] * valid_bit[head+1]) ;
+        num  <= num + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]} - ({{num_bits_index-2{1'b0}}, read_enable_S} * (valid_bit[head] * valid_bit[head+1]));   
     end
 end
 
 always_comb begin
     instruction_o[0] = 'b0;
     instruction_o[1] = 'b0;
+
     commit_gl_entry_o = head;
     head_puls_one = head + 1;
 
+    //TODO: Don't understand it is already scalar?
     if ((~flush_commit_i)) begin
         if (((num == 1) & valid_bit[head]) || ((num > 1) & valid_bit[head] & !valid_bit[head_puls_one])) begin // Imposible case
             instruction_o[0] = entries[head];
@@ -233,7 +239,7 @@ end
 
 assign assigned_gl_entry_o = tail;
 assign empty_o = (num == 0);
-assign full_o  = (int'(num) == NUM_ENTRIES-1);
+assign full_o  = (int'(num) >= NUM_ENTRIES-1);
 assign result_o = result_q;
 assign exception_o = exception_q;
 assign csr_addr_o = csr_addr_q;
