@@ -396,12 +396,12 @@ typedef struct packed {
 } ir_rr_stage_t;
 
 typedef struct packed {
-    instr_entry_t [1:0] instr_S;                // Instruction
-    exception_t [1:0] ex_S;                     // Exceptions
-    phreg_t [1:0] prs1_S;                       // Physical register source 1
-    logic  [1:0] rdy1_S;                       // Ready register source 1
-    phreg_t [1:0] prs2_S;                       // Physical register source 2
-    logic  [1:0] rdy2_S;                       // Ready register source 2 
+    instr_entry_t [1:0] instr;                // Instruction
+    exception_t [1:0] ex;                     // Exceptions
+    phreg_t [1:0] prs1;                       // Physical register source 1
+    logic  [1:0] rdy1;                       // Ready register source 1
+    phreg_t [1:0] prs2;                       // Physical register source 2
+    logic  [1:0] rdy2;                       // Ready register source 2 
     phreg_t fprs1;                      // FP Physical register source 1
     logic   frdy1;                      // FP Ready register source 1
     phreg_t fprs2;                      // FP Physical register source 2
@@ -443,6 +443,33 @@ typedef struct packed {
 
     gl_index_t gl_index;                // Graduation List entry
 } rr_exe_instr_t;       //  Read Regfile to Execution stage for arithmetic pipeline
+
+typedef struct packed {
+    instr_entry_t [1:0] instr;                // Instruction
+    bus64_t [1:0] data_rs1;                   // Data operand 1
+    bus64_t [1:0] data_rs2;                   // Data operand 2
+    bus64_t data_rs3;                   // Data operand 3 FP
+    phreg_t [1:0] prs1;                       // Physical register source 1
+    logic   [1:0] rdy1;                       // Ready register source 1
+    phreg_t [1:0] prs2;                       // Physical register source 2
+    logic   [1:0] rdy2;                       // Ready register source 2
+    phreg_t fprs1;                       // Physical register source 1
+    logic   frdy1;                       // Ready register source 1
+    phreg_t fprs2;                       // Physical register source 2
+    logic   frdy2;                       // Ready register source 2
+    phreg_t fprs3;                       // Physical register source 2
+    logic   frdy3;                       // Ready register source 3
+    phreg_t [1:0] prd;                        // Physical register destination 
+    phreg_t [1:0] old_prd;                    // Old Physical register destination
+    phreg_t fprd;                        // Physical register destination
+    phreg_t old_fprd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} rr_exe_instr_t_S;       //  Read Regfile to Execution stage for arithmetic pipeline
+
 
 typedef struct packed {
     instr_entry_t instr;                // Instruction
