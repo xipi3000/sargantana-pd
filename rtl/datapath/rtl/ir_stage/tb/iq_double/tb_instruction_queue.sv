@@ -44,12 +44,11 @@ module tb_instruction_queue();
     logic tb_read_head_S_i[NUM_SCALAR_INSTR];
     logic tb_full_o;
     logic tb_flush_i;
-    logic tb_is_iq_2_empty
+    logic tb_is_iq_2_empty;
     id_ir_stage_t tb_instruction_S_i[NUM_SCALAR_INSTR];
     id_ir_stage_t tb_instruction_S_o[NUM_SCALAR_INSTR];
     id_ir_stage_t tb_stage_iq_ir_q_0[NUM_SCALAR_INSTR];
     id_ir_stage_t tb_stage_iq_ir_q_1[NUM_SCALAR_INSTR];
-
 //-----------------------------
 // Module
 //-----------------------------
@@ -59,9 +58,9 @@ module tb_instruction_queue();
         .rstn_i         (tb_rstn_i),  
         .flush_i        (tb_flush_i),  
         .instruction_S_i  ({tb_instruction_S_i[0],
-                           (tb_instruction_S_i[1].instr.regfile_we & tb_instruction_S_i[1].instr.mem_type == NOT_MEM) ? 0 : tb_instruction_S_i[1]}), 
-        .read_head_i    ({tb_read_head_S_i[0],
-                        (tb_is_iq_2_empty) ? tb_read_head_S_i[0] : 0}),
+                           (~tb_instruction_S_i[1].instr.regfile_we & tb_instruction_S_i[1].instr.mem_type == NOT_MEM) ? 'h0 : tb_instruction_S_i[1]}), 
+        .read_head_S_i    ({tb_read_head_S_i[0],
+                        (tb_is_iq_2_empty) ? tb_read_head_S_i[0] : 'h0}),
         .instruction_S_o  (tb_stage_iq_ir_q_0),
         .full_o         (tb_full_o),
         .empty_o        (tb_empty_o)
@@ -70,16 +69,16 @@ module tb_instruction_queue();
         .clk_i          (tb_clk_i),
         .rstn_i         (tb_rstn_i),  
         .flush_i        (tb_flush_i),  
-        .instruction_S_i  ({(tb_instruction_S_i[1].instr.regfile_we & tb_instruction_S_i[1].instr.mem_type == NOT_MEM) ?  tb_instruction_S_i[1] : 'h0,
+        .instruction_S_i  ({(~tb_instruction_S_i[1].instr.regfile_we & tb_instruction_S_i[1].instr.mem_type == NOT_MEM) ?  tb_instruction_S_i[1] : 'h0,
                         'h0
                         }), 
-        .read_head_i    ({tb_read_head_S_i[1]}),
+        .read_head_S_i    ({tb_read_head_S_i[1], 'h0}),
         .instruction_S_o  (tb_stage_iq_ir_q_1),
         .full_o         (tb_full_o),
         .empty_o        (tb_is_iq_2_empty)
     );
 
-    assign tb_instruction_S_o ={tb_stage_iq_ir_q_0[0],  tb_stage_iq_ir_q_0[1] == 'h0 ?  tb_stage_iq_ir_q_1[0] : tb_stage_iq_ir_q_0[1]}
+    assign tb_instruction_S_o ={tb_stage_iq_ir_q_0[0],  tb_stage_iq_ir_q_0[1] == 'h0 ?  tb_stage_iq_ir_q_1[0] : tb_stage_iq_ir_q_0[1]};
 //-----------------------------
 // DUT
 //-----------------------------
@@ -122,7 +121,8 @@ module tb_instruction_queue();
         begin
             $display("*** init_dump");
             $dumpfile("dump_file.vcd");
-            $dumpvars(0,instruction_queue_inst);
+            $dumpvars(0,instruction_queue_inst_1);
+            $dumpvars(0,instruction_queue_inst_2);
         end
     endtask
 
@@ -141,9 +141,9 @@ module tb_instruction_queue();
             tmp = 0;
             #CLK_PERIOD;
             assert(tb_full_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.head[0] == 0)  else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.tail[0] == 0)  else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.num[0] == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.head[0] == 0)  else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.tail[0] == 0)  else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.num[0] == 0) else begin tmp++; assert(1 == 0); end
     
             #CLK_PERIOD;
 
@@ -157,8 +157,8 @@ module tb_instruction_queue();
         output int tmp;
         begin
             tick();
-            for(int i = 0; i < NUM_SCALAR_INSTR; i++) begin
-                tb_instruction_S_i[i].instr = '{   
+            
+                tb_instruction_S_i[0].instr = '{   
                     valid: 1'b1,                   // Valid instruction
                     pc: addrPC_t'(1),           // PC of the instruction
                     instr_type: instr_type_t'(1),       // Type of instruction
@@ -166,23 +166,32 @@ module tb_instruction_queue();
                     rs1: reg_t'(1),              // Source register 1
                     default: '0
                 };
-            end    
+                tb_instruction_S_i[1].instr = '{   
+                    valid: 1'b1,                   // Valid instruction
+                    pc: addrPC_t'(1),           // PC of the instruction
+                    instr_type: instr_type_t'(1),       // Type of instruction
+                    rd: reg_t'(1),              // Destination Register
+                    rs1: reg_t'(1),              // Source register 1
+                    mem_type: 2'b11,
+                    default: '0
+                };
+              
             for(int i=0; i<16; i+=2) begin            // Reads 32 free registers
 
                 tick();
                 
-                assert(instruction_queue_inst.head == 3'h0)  else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.tail == i) else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.num == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.head == 3'h0)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.tail == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.num == i) else begin tmp++; assert(1 == 0); end
                
             end
 
             tick(); // Tries to read but is empty
 
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
-            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.num == 16) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst_1.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.num == 16) else begin tmp++; assert(1 == 0); end
             tb_instruction_S_i = {default:0};
             tick(); 
 
@@ -192,17 +201,17 @@ module tb_instruction_queue();
 
                 tick();
                 
-                assert(instruction_queue_inst.head == i)  else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.num == 16-i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.head == i)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.tail == 0) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.num == 16-i) else begin tmp++; assert(1 == 0); end
                
             end
 
             tick();
             assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
-            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.num == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst_1.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.num == 0) else begin tmp++; assert(1 == 0); end
 
              tb_read_head_S_i= {0,0};
 
@@ -226,18 +235,18 @@ module tb_instruction_queue();
 
                 tick();
                 
-                assert(instruction_queue_inst.head == 3'h0)  else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.tail == i) else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.num == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.head == 3'h0)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.tail == i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.num == i) else begin tmp++; assert(1 == 0); end
                
             end
 
             tick(); // Tries to read but is empty
 
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
-            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.num == 16) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst_1.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.num == 16) else begin tmp++; assert(1 == 0); end
             tb_instruction_S_i = {default:0};
             tick(); 
 
@@ -247,17 +256,17 @@ module tb_instruction_queue();
 
                 tick();
                 
-                assert(instruction_queue_inst.head == i)  else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
-                assert(instruction_queue_inst.num == 16-i) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.head == i)  else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.tail == 0) else begin tmp++; assert(1 == 0); end
+                assert(instruction_queue_inst_1.num == 16-i) else begin tmp++; assert(1 == 0); end
                
             end
 
             tick();
             assert(tb_empty_o == 1) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.head == 0) else begin tmp++; assert(1 == 0); end          
-            assert(instruction_queue_inst.tail == 0) else begin tmp++; assert(1 == 0); end
-            assert(instruction_queue_inst.num == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.head == 0) else begin tmp++; assert(1 == 0); end          
+            assert(instruction_queue_inst_1.tail == 0) else begin tmp++; assert(1 == 0); end
+            assert(instruction_queue_inst_1.num == 0) else begin tmp++; assert(1 == 0); end
 
 
 
