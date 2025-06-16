@@ -1066,21 +1066,30 @@ module datapath
         .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
     );
 
+    exe_stage_red exe_stage_red_inst(
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        .clk_i(clk_i),
+        .rstn_i(rstn_i),
+        .kill_i(flush_int.kill_exe),
+        .from_rr_i(reg_to_exe_S[1]),
+        .flush_i(flush_int.flush_exe),
     
+        .exe_if_branch_pred_o(exe_if_branch_pred_int),
+        .correct_branch_pred_o(correct_branch_pred),
+    
+        .arith_to_scalar_wb_o(exe_to_wb_scalar[1]),
+        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[1]),
+        .exe_cu_o(exe_cu_int),
+        //PMU Neiel-Leyva
+        .pmu_is_branch_o          (pmu_flags_o.is_branch),      
+        .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
+        .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
+        .pmu_exe_ready_o          (pmu_exe_ready),
+        .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
+    );
+
+
+
 
     register #( (NUM_SCALAR_WB) * $bits(exe_wb_scalar_instr_t) + (NUM_FP_WB) * $bits(exe_wb_fp_instr_t)) reg_exe_inst(
         .clk_i(clk_i),
