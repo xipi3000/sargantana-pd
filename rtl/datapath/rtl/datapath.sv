@@ -94,7 +94,9 @@ module datapath
     logic src_select_id_ir_q;
     
     // Rename and free list
-    id_ir_stage_t stage_iq_ir_q_S;
+    id_ir_stage_t [NUM_SCALAR_INSTR:0] stage_iq_ir_q_S;
+    id_ir_stage_t [NUM_SCALAR_INSTR:0] stage_iq_ir_q_0;
+    id_ir_stage_t [NUM_SCALAR_INSTR:0] stage_iq_ir_q_1;
     id_ir_stage_t stage_ir_rr_d;
     ir_rr_stage_t_S stage_ir_rr_q_Ss;
     ir_rr_stage_t_S stage_stall_rr_q_Ss;
@@ -119,6 +121,8 @@ module datapath
     logic out_of_checkpoints_free_list;
     logic fp_out_of_checkpoints_rename;
     logic fp_out_of_checkpoints_free_list;
+
+    logic is_iq_2_empty;
 
     logic free_list_empty;
     logic fp_free_list_empty;
@@ -484,26 +488,44 @@ module datapath
          for (int i = 0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
             selection_id_ir_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr_S[i] : stored_instr_id_q_S[i],
          end
+
+        if(selection_id_ir_S)
+
+
     end
     
         // Instruction Queue 
-    instruction_queue instruction_queue_inst(
+    instruction_queue instruction_queue_inst_1(
         .clk_i          (clk_i),
         .rstn_i         (rstn_i),  
         .flush_i        (flush_int.flush_ir),  
-        .instruction_S_i  (selection_id_ir_S), 
+        .instruction_S_i  ({selection_id_ir_S[0],
+                           (selection_id_ir_S[1].instr.regfile_we & selection_id_ir_S[1].instr.mem_type == NOT_MEM) ? 0 : selection_id_ir_S[1]}), 
         .read_head_i    ({~control_int_S[0].stall_iq,
-                            ~control_int_S[1].stall_iq}),
-        .instruction_S_o  (stage_iq_ir_q_S),
+                        (is_iq_2_empty) ? ~control_int_S[0].stall_iq : 0}),
+        .instruction_S_o  (stage_iq_ir_q_0),
         .full_o         (ir_cu_int.full_iq),
         .empty_o        ()
     );
+    instruction_queue instruction_queue_inst_2(
+        .clk_i          (clk_i),
+        .rstn_i         (rstn_i),  
+        .flush_i        (flush_int.flush_ir),  
+        .instruction_S_i  ({(selection_id_ir_S[1].instr.regfile_we & selection_id_ir_S[1].instr.mem_type == NOT_MEM) ?  selection_id_ir_S[1] : 'h0,
+                        'h0
+                        }), 
+        .read_head_i    ({~control_int_S[1].stall_iq}),
+        .instruction_S_o  (stage_iq_ir_q_1),
+        .full_o         (ir_cu_int.full_iq),
+        .empty_o        (is_iq_2_empty)
+    );
 
+    assign stage_iq_ir_q_S ={stage_iq_ir_q_0[0],  stage_iq_ir_q_0[1] == 'h0 ?  stage_iq_ir_q_1[0] : stage_iq_ir_q_0[1]}
     // Free List
     free_list free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
-        .read_head_S_i            ({stage_iq_ir_q_S[0].instr.regfile_we & .valid & (stage_iq_ir_q_S[0].instr.rd != 'h0) & (~control_int_S[0].stall_ir) & (~control_int_S[0].stall_iq),      
+        .read_head_S_i            ({stage_iq_ir_q_S[0].instr.regfile_we & stage_iq_ir_q_S[0].instr.valid & (stage_iq_ir_q_S[0].instr.rd != 'h0) & (~control_int_S[0].stall_ir) & (~control_int_S[0].stall_iq),      
                                     stage_iq_ir_q_S[1].instr.regfile_we & stage_iq_ir_q_S[1].instr.valid & (stage_iq_ir_q_S[1].instr.rd != 'h0) & (~control_int_S[1].stall_ir) & (~control_int_S[1].stall_iq)}),
         .add_free_register_S_i    (cu_ir_int.enable_commit_update),
         .free_register_S_i        ({instruction_to_commit[1].old_prd, instruction_to_commit[0].old_prd}),
