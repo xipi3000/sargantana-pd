@@ -500,9 +500,9 @@ module datapath
         .rstn_i         (rstn_i),  
         .flush_i        (flush_int.flush_ir),  
         .instruction_S_i  ({selection_id_ir_S[0],
-                           (selection_id_ir_S[1].instr.regfile_we & selection_id_ir_S[1].instr.mem_type == NOT_MEM) ? 0 : selection_id_ir_S[1]}), 
-        .read_head_i    ({~control_int_S[0].stall_iq,
-                        (is_iq_2_empty) ? ~control_int_S[0].stall_iq : 0}),
+                           (selection_id_ir_S[1].instr.regfile_we & selection_id_ir_S[1].instr.mem_type == NOT_MEM) ? 'h0 : selection_id_ir_S[1]}), 
+        .read_head_S_i    ({~control_int_S[0].stall_iq,
+                        (is_iq_2_empty) ? ~control_int_S[0].stall_iq : 'h0}),
         .instruction_S_o  (stage_iq_ir_q_0),
         .full_o         (ir_cu_int.full_iq),
         .empty_o        ()
@@ -514,13 +514,13 @@ module datapath
         .instruction_S_i  ({(selection_id_ir_S[1].instr.regfile_we & selection_id_ir_S[1].instr.mem_type == NOT_MEM) ?  selection_id_ir_S[1] : 'h0,
                         'h0
                         }), 
-        .read_head_i    ({~control_int_S[1].stall_iq}),
+        .read_head_S_i    ({~control_int_S[1].stall_iq,'h0}),
         .instruction_S_o  (stage_iq_ir_q_1),
         .full_o         (ir_cu_int.full_iq),
         .empty_o        (is_iq_2_empty)
     );
 
-    assign stage_iq_ir_q_S ={stage_iq_ir_q_0[0],  stage_iq_ir_q_0[1] == 'h0 ?  stage_iq_ir_q_1[0] : stage_iq_ir_q_0[1]}
+    assign stage_iq_ir_q_S ={stage_iq_ir_q_0[0],  stage_iq_ir_q_0[1] == 'h0 ?  stage_iq_ir_q_1[0] : stage_iq_ir_q_0[1]};
     // Free List
     free_list free_list_inst(
         .clk_i                  (clk_i),
