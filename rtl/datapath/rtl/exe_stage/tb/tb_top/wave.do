@@ -28,8 +28,14 @@ add wave -color yellow -noupdate /tb_module/module_inst/ready_div_unit
 add wave -color yellow -noupdate /tb_module/count
 add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/div
 add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/free_div_unit
+add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/mul
+add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/ready_mul_64_o
+add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_64_i
 
-add wave -noupdate /tb_module/module_inst/stall_int
+add wave -color red -noupdate /tb_module/module_inst/stall_int
+add wave -color red -noupdate /tb_module/tb_exe_cu_o.stall
+
+
 add wave -noupdate /tb_module/module_inst/from_rr_i.instr.valid
 add wave -noupdate /tb_module/module_inst/arith_instr.instr.valid
 add wave -noupdate /tb_module/module_inst/arith_instr.data_rs1

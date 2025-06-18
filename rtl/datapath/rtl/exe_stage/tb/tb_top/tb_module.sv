@@ -288,21 +288,21 @@ exe_stage_red module_inst (
                 tb_from_rr_i.data_rs2 <= src2;
                 tb_from_rr_i.rdy1 <= 1;
 
-
-
-                #CLK_PERIOD
-                while(!tb_exe_cu_o.stall)   begin
+                #CLK_PERIOD;
+                
+                #CLK_PERIOD;
+                tb_from_rr_i.instr.valid <= 0;
+                while(tb_exe_cu_o.stall)   begin
                     #CLK_PERIOD;
                 end
-                tb_from_rr_i.rdy1 <= 0;
-                tb_from_rr_i.rdy1 <= 0;
-                #CLK_PERIOD;
+
                 if (tb_to_wb_o_1.result != (src1*src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
                     $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o_1.result);
                     `END_COLOR_PRINT
                 end
+                tb_from_rr_i.instr.valid <= 1;
                 
             end
         end

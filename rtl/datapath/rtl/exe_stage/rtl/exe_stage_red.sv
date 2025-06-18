@@ -216,7 +216,7 @@ always_comb begin
             set_mul_32_inst = ready & ready_mul_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
-            stall_int = ~ready | ~ready_mul_64_inst;
+            stall_int = ~ready | ~ready_mul_64_inst ;
             set_mul_64_inst = ready & ready_mul_64_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM) begin

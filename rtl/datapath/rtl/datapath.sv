@@ -1119,8 +1119,8 @@ module datapath
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
-        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_scalar[2], exe_to_wb_scalar[3], exe_to_wb_fp[0], exe_to_wb_fp[1]}),
-        .output_o({wb_scalar[0], wb_scalar[1], wb_scalar[2], wb_scalar[3], wb_fp[0], wb_fp[1]})
+        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_fp[0], exe_to_wb_fp[1]}),
+        .output_o({wb_scalar[0], wb_scalar[1], wb_fp[0], wb_fp[1]})
     );
 
     always_ff @(posedge clk_i, negedge rstn_i) begin

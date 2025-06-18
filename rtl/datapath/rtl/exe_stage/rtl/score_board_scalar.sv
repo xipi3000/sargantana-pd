@@ -101,7 +101,7 @@ module score_board_scalar (
 
     assign ready_1cycle_o = (~mul[0]) & (~div[0]);
     assign ready_mul_32_o = (~mul[1]) & (~div[1]);
-    assign ready_mul_64_o = (~mul[1]);
+    assign ready_mul_64_o =  (~mul[1]); // (~mul[1]) & (~mul[0]);
     assign ready_div_32_o = (~div[17]);
     assign div_unit_sel_o = ~free_div_unit[0];
     assign ready_div_unit_o = free_div_unit[0] | free_div_unit[1];
