@@ -47,7 +47,7 @@ module datapath
     output debug_out_t      debug_o,
     output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
-    output to_PMU_t         pmu_flags_o
+    output to_PMU_t [NUM_SCALAR_INSTR]        pmu_flags_o_S
 );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1080,12 +1080,12 @@ module datapath
         .req_cpu_dcache_o(req_cpu_dcache_o),
 
         //PMU Neiel-Leyva
-        .pmu_is_branch_o          (pmu_flags_o.is_branch),      
-        .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
-        .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
+        .pmu_is_branch_o          (pmu_flags_o[0].is_branch),      
+        .pmu_branch_taken_o       (pmu_flags_o[0].branch_taken),   
+        .pmu_stall_mem_o          (pmu_flags_o[0].stall_wb),
         .pmu_exe_ready_o          (pmu_exe_ready),
-        .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
-        .pmu_load_after_store_o   (pmu_flags_o.stall_rr)
+        .pmu_struct_depend_stall_o(pmu_flags_o[0].struct_depend),
+        .pmu_load_after_store_o   (pmu_flags_o[0].stall_rr)
     );
 
     exe_stage_red exe_stage_red_inst(
@@ -1096,6 +1096,7 @@ module datapath
         .from_rr_i(reg_to_exe_S[1]),
         .flush_i(flush_int.flush_exe),
     
+        //TODO: this should be scalar
         .exe_if_branch_pred_o(exe_if_branch_pred_int),
         .correct_branch_pred_o(correct_branch_pred),
     
@@ -1103,11 +1104,11 @@ module datapath
         .mul_div_to_scalar_wb_o(exe_to_wb_scalar[1]),
         .exe_cu_o(exe_cu_int),
         //PMU Neiel-Leyva
-        .pmu_is_branch_o          (pmu_flags_o.is_branch),      
-        .pmu_branch_taken_o       (pmu_flags_o.branch_taken),   
-        .pmu_stall_mem_o          (pmu_flags_o.stall_wb),
+        .pmu_is_branch_o          (pmu_flags_o[1].is_branch),      
+        .pmu_branch_taken_o       (pmu_flags_o[1].branch_taken),   
+        .pmu_stall_mem_o          (pmu_flags_o[1].stall_wb),
         .pmu_exe_ready_o          (pmu_exe_ready),
-        .pmu_struct_depend_stall_o(pmu_flags_o.struct_depend),
+        .pmu_struct_depend_stall_o(pmu_flags_o[1].struct_depend),
     );
 
 
@@ -1143,7 +1144,7 @@ module datapath
     assign wb_amo_int = wb_scalar[1].mem_type == AMO;
 
     //WB data for the bypasses (the CSRs should not be bypassed)
-    always_comb begin
+    always_comb begin 
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             //Graduation list writeback arrays
             if (i == 1) begin
