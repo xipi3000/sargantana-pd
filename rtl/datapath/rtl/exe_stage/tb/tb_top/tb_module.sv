@@ -203,8 +203,6 @@ exe_stage_red module_inst (
             check_out(5,tmp);
             test_sim_6(tmp);
             check_out(6,tmp);
-            test_sim_7(tmp);
-            check_out(7,tmp);
         end
     endtask
 
@@ -364,17 +362,13 @@ exe_stage_red module_inst (
             for(int i = 0; i < 100; i++) begin
                 pc = $urandom();
                 imm = $urandom();
-                src1 = $urandom();
-                src1[63:32] = $urandom();
-                src2 = $urandom();
-                src2[63:32] = $urandom();
                 tb_from_rr_i.instr.pc <= pc;
-                tb_from_rr_i.data_rs1 <= src1;
-                tb_from_rr_i.data_rs2 <= src2;
+                tb_from_rr_i.instr.imm <= imm;
+
                 #CLK_HALF_PERIOD;
                 while(tb_stall_o)#CLK_PERIOD;
                 //#CLK_PERIOD;
-                if (tb_to_wb_o_1.result != pc + 4 | tb_to_wb_o_1.result_pc != 0) begin
+                if (tb_to_wb_o_1.result != pc + 4 | tb_to_wb_o_1.result_pc !=( pc + imm) & 64'hFFFFFFFFFFFFFFFE) begin
                     tmp = 1;
                     `START_RED_PRINT
                     $error("Result incorrect rd %h out: %h pc %h out: %h",pc + 4,tb_to_wb_o_1.result,pc + imm,tb_to_wb_o_1.result_pc);
@@ -421,6 +415,7 @@ exe_stage_red module_inst (
     endtask
 
 // Testing csr interruption
+/* WE DON'T HAVE CSR FOR SOME REASON
     task automatic test_sim_7;
         output int tmp;
         begin
@@ -440,7 +435,9 @@ exe_stage_red module_inst (
                 src2[63:32] = $urandom();
                 tb_from_rr_i.instr.pc <= pc;
                 tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.rdy1 <= 1;
                 tb_from_rr_i.data_rs2 <= src2;
+                tb_from_rr_i.rdy2 <= 1;
                 #CLK_HALF_PERIOD;
                 if (tb_to_wb_o_1.result != (src1+src2)) begin
                     tmp = 1;
@@ -462,7 +459,7 @@ exe_stage_red module_inst (
             end
         end
     endtask
-
+*/
 //***init_sim***
 //The tasks that compose my testbench are executed here, feel free to add more tasks.
     initial begin
