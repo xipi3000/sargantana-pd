@@ -179,7 +179,7 @@ branch_unit branch_unit_inst (
 
 always_comb begin
 
-
+    //TODO: THIS SHOULD NOT NEED UNIT COMPARATION
     if (mul_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_MUL) begin
         exe_red_wb_o = mul_to_scalar_wb;
     end else if (div_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_DIV) begin
