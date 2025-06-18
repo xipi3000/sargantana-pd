@@ -332,8 +332,12 @@ exe_stage_red module_inst (
                 tb_from_rr_i.rdy1 <= 1;
                 tb_from_rr_i.data_rs2 <= src2;
                 tb_from_rr_i.rdy1 <= 1;
-                #CLK_HALF_PERIOD;
-                while(tb_stall_o)#CLK_PERIOD;
+                #CLK_PERIOD;
+                #CLK_PERIOD;
+                #CLK_PERIOD;
+                while(tb_exe_cu_o.stall) begin
+                    #CLK_PERIOD;
+                end
                 //#CLK_PERIOD;
                 if (tb_to_wb_o_2.result != (src1/src2)) begin
                     tmp = 1;
