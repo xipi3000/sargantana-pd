@@ -294,16 +294,19 @@ exe_stage_red module_inst (
 
 
 
-                #CLK_HALF_PERIOD;
-                while(!tb_to_wb_o_2.valid)#CLK_PERIOD;
-                //#CLK_PERIOD;
+                #CLK_PERIOD
+                while(!tb_exe_cu_o.stall)   begin
+                    #CLK_PERIOD;
+                end
+                tb_from_rr_i.rdy1 <= 0;
+                tb_from_rr_i.rdy1 <= 0;
+                #CLK_PERIOD;
                 if (tb_to_wb_o_2.result != (src1*src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
                     $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o_2.result);
                     `END_COLOR_PRINT
                 end
-                #CLK_HALF_PERIOD;
             end
         end
     endtask

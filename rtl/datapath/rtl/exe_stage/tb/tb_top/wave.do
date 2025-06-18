@@ -14,18 +14,28 @@ add wave -noupdate /tb_module/module_inst/from_rr_i.instr.valid
 add wave -noupdate /tb_module/module_inst/arith_instr.instr.valid
 add wave -noupdate /tb_module/module_inst/arith_instr.data_rs1
 add wave -noupdate /tb_module/module_inst/arith_instr.data_rs2
+add wave -noupdate /tb_module/module_inst/mul_div_to_scalar_wb_o.result
 
-add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/mul
-add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/div
-add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/ready_mul_64_o
-add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_32_i
-add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_64_i
-add wave -noupdate /tb_module/module_inst/alu_to_scalar_wb.valid
-add wave -noupdate /tb_module/module_inst/alu_to_scalar_wb.result
+add wave  -color yellow -noupdate /tb_module/module_inst/mul_unit_inst/data_src1
+add wave  -color yellow -noupdate /tb_module/module_inst/mul_unit_inst/data_src2
+add wave  -color yellow -noupdate /tb_module/module_inst/mul_unit_inst/instruction_0_d.valid
+add wave  -color yellow -noupdate /tb_module/module_inst/mul_unit_inst/instruction_s1.valid
+add wave  -color yellow -noupdate /tb_module/module_inst/mul_unit_inst/instruction_s2.valid
+add wave  -color yellow -noupdate /tb_module/module_inst/mul_unit_inst/instruction_s2.result
+
+add wave -color orange -noupdate /tb_module/module_inst/score_board_scalar_inst/mul
+add wave -color orange -noupdate /tb_module/module_inst/score_board_scalar_inst/div
+add wave -color orange -noupdate /tb_module/module_inst/score_board_scalar_inst/ready_mul_64_o
+add wave -color orange -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_32_i
+add wave -color orange -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_64_i
+
+add wave -color purple -noupdate /tb_module/tb_to_wb_o_1.valid
+add wave -color purple -noupdate /tb_module/tb_to_wb_o_1.result
+
+add wave -color purple -noupdate /tb_module/tb_to_wb_o_2.result
+add wave -color purple -noupdate /tb_module/tb_to_wb_o_2.valid
 
 
-add wave -noupdate /tb_module/tb_to_wb_o_1
-add wave -noupdate /tb_module/tb_to_wb_o_2
 
 add wave -noupdate -radix ascii /tb_module/tb_test_name
 TreeUpdate [SetDefaultTree]
