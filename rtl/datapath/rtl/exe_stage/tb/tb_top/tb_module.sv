@@ -77,7 +77,10 @@ exe_if_branch_pred_t tb_exe_if_branch_pred_o;
 
 rr_exe_instr_t      tb_from_rr_i;
 wb_exe_instr_t      tb_from_wb_i;
-exe_wb_instr_t      tb_to_wb_o;
+exe_wb_scalar_instr_t    tb_to_wb_o_1;
+exe_wb_scalar_instr_t    tb_to_wb_o_2;
+
+exe_cu_t tb_exe_cu_o;
 
 resp_dcache_cpu_t tb_dmem_resp_i;
 req_cpu_dcache_t  tb_cpu_req_o;
@@ -88,23 +91,19 @@ reg[64*8:0] tb_test_name;
 // Module
 //-----------------------------
 
-exe_stage module_inst (
+exe_stage_red module_inst (
     .clk_i(tb_clk_i),
     .rstn_i(tb_rstn_i),
     .kill_i(tb_kill_i),
-    .csr_interrupt_i(tb_csr_i),
-    .csr_interrupt_cause_i(tb_csr_cause_i),
 
     .from_rr_i(tb_from_rr_i),
-    .from_wb_i(tb_from_wb_i),
+    .exe_cu_o(tb_exe_cu_o),
 
-    .resp_dcache_cpu_i(tb_dmem_resp_i),
-    .req_cpu_dcache_o(tb_cpu_req_o),
-    .io_base_addr_i(tb_io_base_addr_i),
 
-    .to_wb_o(tb_to_wb_o),
-    .stall_o(tb_stall_o),
+    .arith_to_scalar_wb_o(tb_to_wb_o_1),
+    .mul_div_to_scalar_wb_o(tb_to_wb_o_2),
 
+    .pmu_struct_depend_stall_o(tb_stall_o),
     .correct_branch_pred_o(tb_correct_branch_pred_o),
     .exe_if_branch_pred_o(tb_exe_if_branch_pred_o)
 );
@@ -216,22 +215,24 @@ exe_stage module_inst (
             longint src1,src2;
             tb_test_name = "test_sim_1";
             tmp = 0;
+            tb_from_rr_i.instr.valid <= 1;
             tb_from_rr_i.instr.unit <= UNIT_ALU;
             tb_from_rr_i.instr.instr_type <= ADD;
             tb_from_rr_i.instr.use_imm <= 0;
-            tb_from_rr_i.instr.result <= 0;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.rdy1 <= 1;
                 tb_from_rr_i.data_rs2 <= src2;
+                tb_from_rr_i.rdy2 <= 1;
                 #CLK_PERIOD;
-                if (tb_to_wb_o.result != (src1+src2)) begin
+                if (tb_to_wb_o_1.result != (src1+src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,(src1+src2),tb_to_wb_o.result);
+                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,(src1+src2),tb_to_wb_o_1.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -245,22 +246,24 @@ exe_stage module_inst (
             longint src1,src2;
             tb_test_name = "test_sim_2";
             tmp = 0;
+            tb_from_rr_i.instr.valid <= 1;
             tb_from_rr_i.instr.unit <= UNIT_ALU;
             tb_from_rr_i.instr.instr_type <= SUB;
             tb_from_rr_i.instr.use_imm <= 0;
-            tb_from_rr_i.instr.result <= 0;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
                 src1[63:32] = $urandom();
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.rdy1 <= 1;
                 tb_from_rr_i.data_rs2 <= src2;
+                tb_from_rr_i.rdy1 <= 1;
                 #CLK_PERIOD;
-                if (tb_to_wb_o.result != (src1-src2)) begin
+                if (tb_to_wb_o_1.result != (src1-src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h - %h = %h out: %h",src1,src2,(src1-src2),tb_to_wb_o.result);
+                    $error("Result incorrect %h - %h = %h out: %h",src1,src2,(src1-src2),tb_to_wb_o_1.result);
                     `END_COLOR_PRINT
                 end
             end
@@ -274,10 +277,10 @@ exe_stage module_inst (
             longint src1,src2;
             tb_test_name = "test_sim_3";
             tmp = 0;
+            tb_from_rr_i.instr.valid <= 1;
             tb_from_rr_i.instr.unit <= UNIT_MUL;
             tb_from_rr_i.instr.instr_type <= MUL;
             tb_from_rr_i.instr.use_imm <= 0;
-            tb_from_rr_i.instr.result <= 0;
             tb_from_rr_i.instr.valid <= 1;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
@@ -285,14 +288,19 @@ exe_stage module_inst (
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.rdy1 <= 1;
                 tb_from_rr_i.data_rs2 <= src2;
+                tb_from_rr_i.rdy1 <= 1;
+
+
+
                 #CLK_HALF_PERIOD;
-                while(tb_stall_o)#CLK_PERIOD;
+                while(!tb_to_wb_o_2.valid)#CLK_PERIOD;
                 //#CLK_PERIOD;
-                if (tb_to_wb_o.result != (src1*src2)) begin
+                if (tb_to_wb_o_2.result != (src1*src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o.result);
+                    $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o_2.result);
                     `END_COLOR_PRINT
                 end
                 #CLK_HALF_PERIOD;
@@ -307,10 +315,10 @@ exe_stage module_inst (
             longint src1,src2;
             tb_test_name = "test_sim_4";
             tmp = 0;
+            tb_from_rr_i.instr.valid <= 1;
             tb_from_rr_i.instr.unit <= UNIT_DIV;
             tb_from_rr_i.instr.instr_type <= DIV;
             tb_from_rr_i.instr.use_imm <= 0;
-            tb_from_rr_i.instr.result <= 0;
             tb_from_rr_i.instr.valid <= 1;
             for(int i = 0; i < 100; i++) begin
                 src1 = $urandom();
@@ -318,14 +326,16 @@ exe_stage module_inst (
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.data_rs1 <= src1;
+                tb_from_rr_i.rdy1 <= 1;
                 tb_from_rr_i.data_rs2 <= src2;
+                tb_from_rr_i.rdy1 <= 1;
                 #CLK_HALF_PERIOD;
                 while(tb_stall_o)#CLK_PERIOD;
                 //#CLK_PERIOD;
-                if (tb_to_wb_o.result != (src1/src2)) begin
+                if (tb_to_wb_o_2.result != (src1/src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o.result);
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o_2.result);
                     `END_COLOR_PRINT
                 end
                 #CLK_HALF_PERIOD;
@@ -352,16 +362,15 @@ exe_stage module_inst (
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.instr.pc <= pc;
-                tb_from_rr_i.instr.result <= imm;
                 tb_from_rr_i.data_rs1 <= src1;
                 tb_from_rr_i.data_rs2 <= src2;
                 #CLK_HALF_PERIOD;
                 while(tb_stall_o)#CLK_PERIOD;
                 //#CLK_PERIOD;
-                if (tb_to_wb_o.result != pc + 4 | tb_to_wb_o.result_pc != 0) begin
+                if (tb_to_wb_o_1.result != pc + 4 | tb_to_wb_o_1.result_pc != 0) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect rd %h out: %h pc %h out: %h",pc + 4,tb_to_wb_o.result,pc + imm,tb_to_wb_o.result_pc);
+                    $error("Result incorrect rd %h out: %h pc %h out: %h",pc + 4,tb_to_wb_o_1.result,pc + imm,tb_to_wb_o_1.result_pc);
                     `END_COLOR_PRINT
                 end
                 #CLK_HALF_PERIOD;
@@ -388,16 +397,15 @@ exe_stage module_inst (
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.instr.pc <= pc;
-                tb_from_rr_i.instr.result <= imm;
                 tb_from_rr_i.data_rs1 <= src1;
                 tb_from_rr_i.data_rs2 <= src2;
                 #CLK_HALF_PERIOD;
                 while(tb_stall_o)#CLK_PERIOD;
                 //#CLK_PERIOD;
-                if (tb_to_wb_o.result != pc + 4 | tb_to_wb_o.result_pc != (src1 + imm) & 64'hFFFFFFFFFFFFFFFE) begin
+                if (tb_to_wb_o_1.result != pc + 4 | tb_to_wb_o_1.result_pc != (src1 + imm) & 64'hFFFFFFFFFFFFFFFE) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect rd %h out: %h pc %h out: %h",pc + 4,tb_to_wb_o.result,(src1 + imm) & 64'hFFFFFFFFFFFFFFFE,tb_to_wb_o.result_pc);
+                    $error("Result incorrect rd %h out: %h pc %h out: %h",pc + 4,tb_to_wb_o_1.result,(src1 + imm) & 64'hFFFFFFFFFFFFFFFE,tb_to_wb_o_1.result_pc);
                     `END_COLOR_PRINT
                 end
                 #CLK_HALF_PERIOD;
@@ -424,20 +432,19 @@ exe_stage module_inst (
                 src2 = $urandom();
                 src2[63:32] = $urandom();
                 tb_from_rr_i.instr.pc <= pc;
-                tb_from_rr_i.instr.result <= imm;
                 tb_from_rr_i.data_rs1 <= src1;
                 tb_from_rr_i.data_rs2 <= src2;
                 #CLK_HALF_PERIOD;
-                if (tb_to_wb_o.result != (src1+src2)) begin
+                if (tb_to_wb_o_1.result != (src1+src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,(src1+src2),tb_to_wb_o.result);
+                    $error("Result incorrect %h + %h = %h out: %h",src1,src2,(src1+src2),tb_to_wb_o_1.result);
                     `END_COLOR_PRINT
                 end
                 #CLK_HALF_PERIOD;
                 tb_csr_i <= 1;
                 #CLK_HALF_PERIOD;
-                if (!tb_to_wb_o.ex.valid) begin
+                if (!tb_to_wb_o_1.ex.valid) begin
                     tmp = 1;
                     `START_RED_PRINT
                     $error("Result incorrect: unhandled exception");

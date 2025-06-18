@@ -1,14 +1,32 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /tb_module/tb_clk_i
+add wave -noupdate /tb_module/tb_from_rr_i
+add wave -noupdate /tb_module/tb_from_rr_i.instr.valid
 add wave -noupdate /tb_module/tb_from_rr_i.instr.instr_type
 add wave -noupdate /tb_module/tb_from_rr_i.instr.unit
 add wave -noupdate /tb_module/tb_from_rr_i.data_rs1
 add wave -noupdate /tb_module/tb_from_rr_i.data_rs2
-add wave -noupdate /tb_module/tb_stall_o
-add wave -noupdate -expand -group output /tb_module/tb_to_wb_o.result
-add wave -noupdate -expand -group output /tb_module/tb_to_wb_o.result_pc
-add wave -noupdate -expand -group output /tb_module/tb_stall_o
+add wave -noupdate /tb_module/module_inst/ready
+
+add wave -noupdate /tb_module/module_inst/stall_int
+add wave -noupdate /tb_module/module_inst/from_rr_i.instr.valid
+add wave -noupdate /tb_module/module_inst/arith_instr.instr.valid
+add wave -noupdate /tb_module/module_inst/arith_instr.data_rs1
+add wave -noupdate /tb_module/module_inst/arith_instr.data_rs2
+
+add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/mul
+add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/div
+add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/ready_mul_64_o
+add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_32_i
+add wave -noupdate /tb_module/module_inst/score_board_scalar_inst/set_mul_64_i
+add wave -noupdate /tb_module/module_inst/alu_to_scalar_wb.valid
+add wave -noupdate /tb_module/module_inst/alu_to_scalar_wb.result
+
+
+add wave -noupdate /tb_module/tb_to_wb_o_1
+add wave -noupdate /tb_module/tb_to_wb_o_2
+
 add wave -noupdate -radix ascii /tb_module/tb_test_name
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {4271 ns} 0}

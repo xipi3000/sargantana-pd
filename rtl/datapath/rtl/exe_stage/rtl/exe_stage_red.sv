@@ -18,7 +18,7 @@
  * under the License.
  */
 
-module exe_stage 
+module exe_stage_red 
     import drac_pkg::*;
     import riscv_pkg::*;
 (
@@ -40,7 +40,7 @@ module exe_stage
     output logic                        pmu_is_branch_o,
     output logic                        pmu_branch_taken_o,    
     output logic                        pmu_exe_ready_o,
-    output logic                        pmu_struct_depend_stall_o,
+    output logic                        pmu_struct_depend_stall_o
 );
 
 // Declarations
@@ -122,7 +122,7 @@ score_board_scalar score_board_scalar_inst(
 
 assign ready = from_rr_i.instr.valid & ( (from_rr_i.rdy1 | from_rr_i.instr.use_pc) 
                                      & (from_rr_i.rdy2 | from_rr_i.instr.use_imm) 
-                                     & (from_rr_i.frdy1) & (from_rr_i.frdy2) & (from_rr_i.frdy3));
+                                    );
 
 always_comb begin
     arith_instr.data_rs1            = rs1_data_def;
@@ -221,8 +221,8 @@ always_comb begin
             set_mul_32_inst = ready & ready_mul_32_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_MUL & ~from_rr_i.instr.op_32) begin
-            stall_int = ~ready | ~ready_mul_64_inst;
-            set_mul_64_inst = ready & ready_mul_64_inst;
+            stall_int = ~ready | ready_mul_64_inst;
+            set_mul_64_inst = ready & ~ready_mul_64_inst;
         end
         else if (from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_BRANCH | from_rr_i.instr.unit == UNIT_SYSTEM) begin
             stall_int = ~ready;
