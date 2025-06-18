@@ -30,8 +30,7 @@ module exe_stage_red
     // INPUTS
     input rr_exe_instr_t                from_rr_i,
     // OUTPUTS
-    output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
-    output exe_wb_scalar_instr_t        mul_div_to_scalar_wb_o,
+    output exe_wb_scalar_instr_t        exe_red_wb_o,
     output exe_cu_t                     exe_cu_o,
 
     output logic                        correct_branch_pred_o,  // Decides if the branch prediction was correct  
@@ -181,20 +180,16 @@ branch_unit branch_unit_inst (
 always_comb begin
 
 
-    if (mul_to_scalar_wb.valid) begin
-        mul_div_to_scalar_wb_o = mul_to_scalar_wb;
-    end else if (div_to_scalar_wb.valid) begin
-        mul_div_to_scalar_wb_o = div_to_scalar_wb;
+    if (mul_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_MUL) begin
+        exe_red_wb_o = mul_to_scalar_wb;
+    end else if (div_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_DIV) begin
+        exe_red_wb_o = div_to_scalar_wb;
+    end else if (alu_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_ALU) begin
+        exe_red_wb_o = alu_to_scalar_wb;
+    end else if (branch_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_BRANCH) begin
+        exe_red_wb_o = branch_to_scalar_wb;
     end else begin
-        mul_div_to_scalar_wb_o = 'h0;
-    end
-    
-    if (alu_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = alu_to_scalar_wb;
-    end else if (branch_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = branch_to_scalar_wb;
-    end else begin
-        arith_to_scalar_wb_o = 'h0;
+        exe_red_wb_o = 'h0;
     end
 
 end
@@ -280,11 +275,11 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
                                              
 
 // Data for the Control Unit
-assign exe_cu_o.valid_1 = arith_to_scalar_wb_o.valid;
-//assign exe_cu_o.valid_4 = mul_div_to_scalar_wb_o.valid;
-assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
+assign exe_cu_o.valid_1 = exe_red_wb_o.valid;
+//assign exe_cu_o.valid_4 = exe_red_wb_o.valid;
+assign exe_cu_o.change_pc_ena_1 = exe_red_wb_o.change_pc_ena;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
-assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
+assign exe_cu_o.branch_taken = exe_red_wb_o.branch_taken;
 assign exe_cu_o.stall = stall_int;
 
 

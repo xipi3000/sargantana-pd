@@ -1,7 +1,7 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /tb_module/tb_clk_i
-add wave -noupdate /tb_module/tb_from_rr_i
+add wave -noupdate /tb_module/tb_from_rr_i.instr
 add wave -noupdate /tb_module/tb_from_rr_i.instr.valid
 add wave -noupdate /tb_module/tb_from_rr_i.instr.instr_type
 add wave -noupdate /tb_module/tb_from_rr_i.instr.unit
@@ -9,6 +9,25 @@ add wave -noupdate /tb_module/tb_from_rr_i.data_rs1
 add wave -noupdate /tb_module/tb_from_rr_i.data_rs2
 add wave -noupdate /tb_module/tb_csr_i
 add wave -noupdate /tb_module/module_inst/ready
+add wave -noupdate /tb_module/arith_instr.instr
+
+
+
+
+add wave  -color yellow -noupdate /tb_module/module_inst/div_unit_inst/data_src1
+add wave  -color yellow -noupdate /tb_module/module_inst/div_unit_inst/data_src2
+add wave  -color yellow -noupdate /tb_module/module_inst/div_unit_inst/instruction_o.valid
+add wave  -color yellow -noupdate /tb_module/module_inst/div_unit_inst/instruction_o.result
+add wave -color yellow -noupdate /tb_module/module_inst/div_unit_inst/dividend_quotient_q
+add wave -color yellow -noupdate /tb_module/module_inst/div_unit_inst/remanent_q
+add wave -color yellow -noupdate /tb_module/module_inst/div_unit_inst/cycles_counter
+add wave -color yellow -noupdate /tb_module/module_inst/div_unit_inst/instruction_i.instr
+add wave -color yellow -noupdate /tb_module/module_inst/div_unit_inst/instruction_q
+add wave -color yellow -noupdate /tb_module/module_inst/set_div_64_inst
+add wave -color yellow -noupdate /tb_module/module_inst/ready_div_unit
+add wave -color yellow -noupdate /tb_module/count
+add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/div
+add wave -color yellow -noupdate /tb_module/module_inst/score_board_scalar_inst/free_div_unit
 
 add wave -noupdate /tb_module/module_inst/stall_int
 add wave -noupdate /tb_module/module_inst/from_rr_i.instr.valid
@@ -16,6 +35,11 @@ add wave -noupdate /tb_module/module_inst/arith_instr.instr.valid
 add wave -noupdate /tb_module/module_inst/arith_instr.data_rs1
 add wave -noupdate /tb_module/module_inst/arith_instr.data_rs2
 add wave -noupdate /tb_module/module_inst/mul_div_to_scalar_wb_o.result
+
+add wave -noupdate /tb_module/module_inst/mul_to_scalar_wb.valid
+add wave -noupdate /tb_module/module_inst/div_to_scalar_wb.valid
+add wave -noupdate /tb_module/module_inst/alu_to_scalar_wb.valid
+add wave -noupdate /tb_module/module_inst/branch_to_scalar_wb.valid
 
 
 add wave  -color yellow -noupdate /tb_module/module_inst/branch_unit_inst/data_rs1

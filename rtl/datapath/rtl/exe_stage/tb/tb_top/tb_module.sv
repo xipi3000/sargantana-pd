@@ -78,8 +78,6 @@ exe_if_branch_pred_t tb_exe_if_branch_pred_o;
 rr_exe_instr_t      tb_from_rr_i;
 wb_exe_instr_t      tb_from_wb_i;
 exe_wb_scalar_instr_t    tb_to_wb_o_1;
-exe_wb_scalar_instr_t    tb_to_wb_o_2;
-
 exe_cu_t tb_exe_cu_o;
 
 resp_dcache_cpu_t tb_dmem_resp_i;
@@ -100,8 +98,7 @@ exe_stage_red module_inst (
     .exe_cu_o(tb_exe_cu_o),
 
 
-    .arith_to_scalar_wb_o(tb_to_wb_o_1),
-    .mul_div_to_scalar_wb_o(tb_to_wb_o_2),
+    .exe_red_wb_o(tb_to_wb_o_1),
 
     .pmu_struct_depend_stall_o(tb_stall_o),
     .correct_branch_pred_o(tb_correct_branch_pred_o),
@@ -138,7 +135,6 @@ exe_stage_red module_inst (
             tb_kill_i<='{default:0};
             tb_csr_i<='{default:0};
             tb_csr_cause_i<='{default:0};
-
             tb_from_rr_i<='{default:0};
             tb_from_wb_i<='{default:0};
 
@@ -272,7 +268,7 @@ exe_stage_red module_inst (
     task automatic test_sim_3;
         output int tmp;
         begin
-            longint src1,src2;
+            longint src1,src2,count;
             tb_test_name = "test_sim_3";
             tmp = 0;
             tb_from_rr_i.instr.valid <= 1;
@@ -280,7 +276,9 @@ exe_stage_red module_inst (
             tb_from_rr_i.instr.instr_type <= MUL;
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.valid <= 1;
+
             for(int i = 0; i < 100; i++) begin
+                count=i;
                 src1 = $urandom();
                 src1[63:32] = $urandom();
                 src2 = $urandom();
@@ -299,12 +297,13 @@ exe_stage_red module_inst (
                 tb_from_rr_i.rdy1 <= 0;
                 tb_from_rr_i.rdy1 <= 0;
                 #CLK_PERIOD;
-                if (tb_to_wb_o_2.result != (src1*src2)) begin
+                if (tb_to_wb_o_1.result != (src1*src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o_2.result);
+                    $error("Result incorrect %h * %h = %h out: %h",src1,src2,(src1*src2),tb_to_wb_o_1.result);
                     `END_COLOR_PRINT
                 end
+                
             end
         end
     endtask
@@ -313,7 +312,7 @@ exe_stage_red module_inst (
     task automatic test_sim_4;
         output int tmp;
         begin
-            longint src1,src2;
+            longint src1,src2,pc,imm;
             tb_test_name = "test_sim_4";
             tmp = 0;
             tb_from_rr_i.instr.valid <= 1;
@@ -321,7 +320,8 @@ exe_stage_red module_inst (
             tb_from_rr_i.instr.instr_type <= DIV;
             tb_from_rr_i.instr.use_imm <= 0;
             tb_from_rr_i.instr.valid <= 1;
-            for(int i = 0; i < 100; i++) begin
+            //for(int i = 0; i < 100; i++) begin
+                tb_from_rr_i.instr.valid <= 1;
                 src1 = $urandom();
                 src1[63:32] = $urandom();
                 src2 = $urandom();
@@ -337,14 +337,27 @@ exe_stage_red module_inst (
                     #CLK_PERIOD;
                 end
                 //#CLK_PERIOD;
-                if (tb_to_wb_o_2.result != (src1/src2)) begin
+                if (tb_to_wb_o_1.result != (src1/src2)) begin
                     tmp = 1;
                     `START_RED_PRINT
-                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o_2.result);
+                    $error("Result incorrect %h / %h = %h out: %h",src1,src2,(src1/src2),tb_to_wb_o_1.result);
                     `END_COLOR_PRINT
                 end
-                #CLK_HALF_PERIOD;
-            end
+                tb_from_rr_i.instr.valid <= 0;
+            tb_from_rr_i.instr.unit <= UNIT_BRANCH;
+            tb_from_rr_i.instr.instr_type <= JAL;
+            pc = $urandom();
+            imm = $urandom();
+            tb_from_rr_i.instr.pc <= pc;
+            tb_from_rr_i.instr.imm <= imm;
+            #CLK_PERIOD;
+            #CLK_PERIOD;
+            #CLK_PERIOD;
+            #CLK_PERIOD;
+            #CLK_PERIOD;
+            #CLK_PERIOD;
+                
+            //end
         end
     endtask
 
