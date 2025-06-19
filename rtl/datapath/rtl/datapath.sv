@@ -235,12 +235,13 @@ module datapath
     // codifies if the branch was correctly predicted 
     // this signal goes from exe stage to fetch stage
     logic correct_branch_pred;
-
+    logic [NUM_SCALAR_INSTR-1:0] correct_branch_pred_S;
     // WB->Commit
     wb_cu_t wb_cu_int;
     cu_wb_t cu_wb_int;
     
     exe_if_branch_pred_t exe_if_branch_pred_int;   
+    exe_if_branch_pred_t [NUM_SCALAR_INSTR-1:0] exe_if_branch_pred_int_S;   
 
     // Commit signals
     commit_cu_t commit_cu_int;
@@ -1057,17 +1058,19 @@ module datapath
         .store_data_o(store_data),
         `endif
     
-        .exe_if_branch_pred_o(exe_if_branch_pred_int),
-        .correct_branch_pred_o(correct_branch_pred),
+        .exe_if_branch_pred_o(exe_if_branch_pred_int_S[0]),
+        .correct_branch_pred_o(correct_branch_pred_S[0]),
     
-        .arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
-        .mem_to_scalar_wb_o(exe_to_wb_scalar[1]),
-        .mul_div_to_scalar_wb_o(exe_to_wb_scalar[3]),
-
-        .fp_to_scalar_wb_o(exe_to_wb_scalar[2]),
-
-        .mem_to_fp_wb_o(exe_to_wb_fp[1]),
+        .exe_to_wb_o(exe_to_wb_scalar[0]),
         .fp_to_wb_o(exe_to_wb_fp[0]),
+        //.arith_to_scalar_wb_o(exe_to_wb_scalar[0]),
+        //.mem_to_scalar_wb_o(exe_to_wb_scalar[1]),
+        //.mul_div_to_scalar_wb_o(exe_to_wb_scalar[3]),
+
+        //.fp_to_scalar_wb_o(exe_to_wb_scalar[2]),
+
+        //.mem_to_fp_wb_o(exe_to_wb_fp[1]),
+        //.fp_to_wb_o(exe_to_wb_fp[0]),
         .exe_cu_o(exe_cu_int),
 
         .mem_commit_stall_o(mem_commit_stall_int),
@@ -1097,8 +1100,8 @@ module datapath
         .flush_i(flush_int.flush_exe),
     
         //TODO: this should be scalar
-        .exe_if_branch_pred_o(exe_if_branch_pred_int),
-        .correct_branch_pred_o(correct_branch_pred),
+        .exe_if_branch_pred_o(exe_if_branch_pred_int_S[1]),
+        .correct_branch_pred_o(correct_branch_pred_S[1]),
     
         .arith_to_scalar_wb_o(exe_to_wb_scalar[1]),
         .mul_div_to_scalar_wb_o(exe_to_wb_scalar[1]),
@@ -1119,9 +1122,19 @@ module datapath
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_exe),
         .load_i(!control_int.stall_exe),
-        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_fp[0], exe_to_wb_fp[1]}),
-        .output_o({wb_scalar[0], wb_scalar[1], wb_fp[0], wb_fp[1]})
+        .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_fp[0]}),
+        .output_o({wb_scalar[0], wb_scalar[1], wb_fp[0]})
     );
+    always_comb begin
+        for ( int i=NUM_SCALAR_INSTR-1; i>=0; i--) begin
+            if(exe_if_branch_pred_int_S[i].is_branch_exe) begin
+                exe_if_branch_pred_int = exe_if_branch_pred_int_S[i]
+                correct_branch_pred = correct_branch_pred_s[i]
+            end
+        end
+    end
+
+
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
@@ -1141,13 +1154,13 @@ module datapath
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    assign wb_amo_int = wb_scalar[1].mem_type == AMO;
+    assign wb_amo_int = wb_scalar[0].mem_type == AMO;
 
     //WB data for the bypasses (the CSRs should not be bypassed)
     always_comb begin 
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
             //Graduation list writeback arrays
-            if (i == 1) begin
+            if (i == 0) begin
                 gl_valid[i] = wb_scalar[i].valid & ~wb_amo_int;
                 gl_index[i] = wb_scalar[i].gl_index;
                 instruction_writeback_gl[i].csr_addr = wb_scalar[i].csr_addr;
@@ -1171,24 +1184,18 @@ module datapath
 
             // Write data regfile from WB or from Commit (CSR)
             // CSR are exclusive with the rest of instrucitons. Therefor, there are no conflicts
-            if (i == 0) begin
-                // Change the data of write port 0 with dbg ring data
-                wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
-                data_wb_to_exe[i] = wb_scalar[i].result;
-                write_paddr_exe[i] = wb_scalar[i].prd;
-                write_vaddr[i] = (commit_cu_int.write_enable) ? instruction_to_commit[0].rd :
-                                  wb_scalar[i].rd;
-                wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
-            end else begin
-                data_wb_to_exe[i]  = wb_scalar[i].result;
-                write_paddr_exe[i] = wb_scalar[i].prd;
-                write_vaddr[i]     = wb_scalar[i].rd;
-                wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
-                wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
-            end
+            
+            // Change the data of write port 0 with dbg ring data
+            wb_cu_int.write_enable[i] = wb_scalar[i].regfile_we;
+            data_wb_to_exe[i] = wb_scalar[i].result;
+            write_paddr_exe[i] = wb_scalar[i].prd;
+            write_vaddr[i] = (commit_cu_int.write_enable) ? instruction_to_commit[0].rd :
+                                wb_scalar[i].rd;
+            wb_cu_int.snoop_enable[i] = wb_scalar[i].regfile_we;
+
             wb_cu_int.valid[i]        = wb_scalar[i].valid;
         end
-        wb_cu_int.change_pc_ena = wb_scalar[0].change_pc_ena;
+        wb_cu_int.change_pc_ena = wb_scalar[1].change_pc_ena;
         
         for (int i = 0; i<NUM_FP_WB; ++i) begin
             //Graduation list writeback arrays

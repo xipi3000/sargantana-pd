@@ -41,12 +41,9 @@ module exe_stage
     input gl_index_t                    commit_store_or_amo_gl_idx_i,  // Signal from commit enables writes.
     input tlb_cache_comm_t              dtlb_comm_i,
     // OUTPUTS
-    output exe_wb_scalar_instr_t        arith_to_scalar_wb_o,
-    output exe_wb_scalar_instr_t        mem_to_scalar_wb_o,
-    output exe_wb_scalar_instr_t        fp_to_scalar_wb_o,
-    output exe_wb_scalar_instr_t        mul_div_to_scalar_wb_o,
-    output exe_wb_fp_instr_t            mem_to_fp_wb_o,
+    output exe_wb_scalar_instr_t        exe_to_wb_o,
     output exe_wb_fp_instr_t            fp_to_wb_o,
+    
     output exe_cu_t                     exe_cu_o,
     output logic                        mem_commit_stall_o,     // Stall commit stage
     output exception_t                  exception_mem_commit_o, // Exception to commit
@@ -314,38 +311,37 @@ fpu_drac_wrapper fpu_drac_wrapper_inst (
 );
 
 always_comb begin
-    if (mem_to_scalar_wb.valid | mem_to_fp_wb.valid) begin
-        mem_to_scalar_wb_o  = mem_to_scalar_wb;
-        mem_to_fp_wb_o      = mem_to_fp_wb;
-    end else begin
-        mem_to_scalar_wb_o  = 'h0;
-        mem_to_fp_wb_o      = 'h0;
-    end
+    if (mem_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_MEM ) begin
+        exe_to_wb_o  = mem_to_scalar_wb;
+        fp_to_wb_o      = 'h0;
 
-    if (mul_to_scalar_wb.valid) begin
-        mul_div_to_scalar_wb_o = mul_to_scalar_wb;
-    end else if (div_to_scalar_wb.valid) begin
-        mul_div_to_scalar_wb_o = div_to_scalar_wb;
-    end else begin
-        mul_div_to_scalar_wb_o = 'h0;
-    end
-    
-    if (alu_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = alu_to_scalar_wb;
-    end else if (branch_to_scalar_wb.valid) begin
-        arith_to_scalar_wb_o = branch_to_scalar_wb;
-    end else begin
-        arith_to_scalar_wb_o = 'h0;
-    end
-
-    // FP write-back struct
-    if (fp_to_wb.valid | fp_to_scalar_wb.valid) begin
+    end else if (mem_to_fp_wb.valid & from_rr_i.instr.unit == UNIT_MEM ) begin
+        fp_to_wb_o      = mem_to_fp_wb;
+        exe_to_wb_o  = 'h0; 
+    end else if (mul_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_MUL) begin
+        exe_to_wb_o = mul_to_scalar_wb;
+        fp_to_wb_o      = 'h0;
+    end else if (div_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_DIV) begin
+        exe_to_wb_o = div_to_scalar_wb;
+        fp_to_wb_o      = 'h0;
+    end else if (alu_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_ALU) begin
+        exe_to_wb_o = alu_to_scalar_wb;
+        fp_to_wb_o      = 'h0;
+    end else if (branch_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_BRANCH) begin
+        exe_to_wb_o = branch_to_scalar_wb;
+        fp_to_wb_o      = 'h0;
+    end else if (fp_to_wb.valid | fp_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_FPU ) begin
         fp_to_wb_o  = fp_to_wb;
-        fp_to_scalar_wb_o = fp_to_scalar_wb;
+        exe_to_wb_o = fp_to_scalar_wb;
     end else begin
         fp_to_wb_o = 'h0;
-        fp_to_scalar_wb_o = 'h0;
+        exe_to_wb_o = 'h0;
     end
+    
+    
+
+    // FP write-back struct
+    
 end
 
 always_comb begin
