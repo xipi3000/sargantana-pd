@@ -439,7 +439,22 @@ always_comb begin
     end
     
 end
+always_comb begin
 
+    //TODO: THIS SHOULD NOT NEED UNIT COMPARATION
+    if (mul_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_MUL) begin
+        exe_red_wb_o = mul_to_scalar_wb;
+    end else if (div_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_DIV) begin
+        exe_red_wb_o = div_to_scalar_wb;
+    end else if (alu_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_ALU) begin
+        exe_red_wb_o = alu_to_scalar_wb;
+    end else if (branch_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_BRANCH) begin
+        exe_red_wb_o = branch_to_scalar_wb;
+    end else begin
+        exe_red_wb_o = 'h0;
+    end
+
+end
 // Branch predictor required signals
 // Program counter at Execution Stage
 assign exe_if_branch_pred_o.pc_execution = from_rr_i.instr.pc; 

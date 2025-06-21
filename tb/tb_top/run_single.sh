@@ -26,7 +26,7 @@ rm -rf lib_module
 vlib lib_module
 vmap work $PWD/lib_module
 vlog $VLOG_FLAGS +acc=rn +incdir+$DRAC_FOLDER_RTL/ $INCLUDES/riscv_pkg.sv $DRAC_FOLDER_RTL/registers.svh \
- $INCLUDES/fpuv_pkg.sv $INCLUDES/drac_pkg.sv \
+ $INCLUDES/fpuv_pkg.sv $INCLUDES/drac_pkg.sv  $INCLUDES/mmu_pkg.sv\
  $INCLUDES/sargantana_icache_pkg.sv $INCLUDES/fpuv_wrapper_pkg.sv $DRAC_FOLDER_RTL/register.sv \
  $IF_STAGE_1/if_stage_1.sv $IF_STAGE_1/bimodal_predictor.sv $IF_STAGE_1/branch_predictor.sv \
  $IF_STAGE_1/return_address_stack.sv $IF_STAGE_2/if_stage_2.sv \

@@ -5,6 +5,7 @@
 ./includes/riscv_pkg.sv
 ./includes/def_pkg.sv
 ./includes/drac_pkg.sv
+./includes/mmu_pkg.sv
 ./rtl/register.sv
 ./rtl/control_unit/rtl/control_unit.sv
 ./rtl/datapath/rtl/interface_csr/rtl/csr_interface.sv

@@ -790,17 +790,26 @@ typedef enum logic [11:0] {
     CSR_PMPADDR_13  = 12'h3BD,  //Physical memory protection addr
     CSR_PMPADDR_14  = 12'h3BE,  //Physical memory protection addr
     CSR_PMPADDR_15  = 12'h3BF,  //Physical memory protection addr
-
+    CSR_MCONFIGPTR     = 12'hF15,
+    CSR_VSTART         = 12'h008, // RVV-0.7,1.0
+    CSR_VXSAT          = 12'h009, // RVV-1.0
+    CSR_VXRM           = 12'h00A, // RVV-1.0
+    CSR_MCOUNTINHIBIT  = 12'h320,
+    CSR_SENVCFG        = 12'h10A,    
+    CSR_VCSR           = 12'h00F, // RVV-1.0 
+    CSR_VLENB          = 12'hC22, // RVV-1.0 
     TO_HOST         = 12'h9F0,  // to host csr used for simulation
     FROM_HOST       = 12'h9F1,  // from host csr used for simulation
 
     CSR_VL          = 12'hC20,  // Vector extension CSR
     CSR_VTYPE       = 12'hC21,  // Vector extension CSR
-
+    CSR_MENVCFG        = 12'h30A,
     CSR_HYPERRAM_CONFIG = 12'h7F0,  // HyperRAM Configuration CSR
     CSR_CNM_CONFIG = 12'h7F1, 	// CNM Peripherals Configuration CSR 
-    CSR_SPI_CONFIG = 12'h7F2  // SPI Configuration CSR
-    
+    CSR_SPI_CONFIG = 12'h7F2,  // SPI Configuration CSR
+    CSR_SCOUNTOVF      = 12'hDA0
+
+
 } csr_reg_t;
 
 localparam logic [63:0] SSTATUS_UIE    = 64'h00000001;
@@ -816,6 +825,7 @@ localparam logic [63:0] SSTATUS_UXL    = 64'h0000000300000000;
 localparam logic [63:0] SSTATUS64_SD   = 64'h8000000000000000;
 localparam logic [63:0] SSTATUS32_SD   = 64'h80000000;
 localparam logic [63:0] SSTATUS64_WPRI = 64'h7ffffffdfff398cc;
+localparam logic [63:0] LCOF_INTERRUPT    = (1 << 63) | IRQ_LCOF;
 
 localparam logic [63:0] MSTATUS_UIE    = 64'h00000001;
 localparam logic [63:0] MSTATUS_SIE    = 64'h00000002;
@@ -842,6 +852,7 @@ localparam logic [63:0] MSTATUS_UXL    = 64'h0000000300000000;
 localparam logic [63:0] MSTATUS_SXL    = 64'h0000000C00000000;
 localparam logic [63:0] MSTATUS64_SD   = 64'h8000000000000000;
 localparam logic [63:0] MSTATUS64_WPRI = 64'h7ffffff5ff800044;
+localparam logic [63:0] MIP_LCOFIP = 1 << IRQ_LCOF;
 
 // decoded CSR address
 typedef struct packed {
@@ -883,5 +894,17 @@ typedef struct packed {
     logic             step;
     priv_lvl_t        prv;
 } dcsr_t;
+typedef struct packed {
+    logic [1:0]   vxrm;      // vector fixed-point rounding mode
+    logic         vxsat;     // vector fixed-point accrued saturation flag
+} vcsr_t;
+
+
+
+
+
+
+
+
 
 endpackage

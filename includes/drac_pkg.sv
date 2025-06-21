@@ -38,6 +38,8 @@ parameter CSR_CMD_SIZE = 3;
 parameter NUM_SCALAR_WB = 4;
 parameter NUM_SCALAR_INSTR = 2;
 parameter NUM_FP_WB = 2;
+localparam int unsigned IRQ_LCOF    = 13;
+parameter VIRT_ADDR_SIZE = 39;
 
 parameter UNMAPPED_ADDR_LOWER = 64'h0; 
 parameter UNMAPPED_ADDR_UPPER = 64'h0; 
@@ -48,15 +50,33 @@ parameter PHISIC_MEM_LIMIT = 64'h0ffffffff;
 `endif
 parameter BROM_SIZE = 20'b000010000000000000000000;
 
+
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
 
+
+parameter PHY_ADDR_SIZE = `CONF_SARGANTANA_PHY_ADDR_SIZE;
+localparam NrMaxRules = 16;
 typedef reg   [63:0]  reg64_t;
 typedef logic [63:0]  bus_simd_t;
 typedef logic [127:0] bus128_t;
 typedef logic [63:0]  bus64_t;
 typedef logic [31:0]  bus32_t;
+
+
+
+`ifdef CONF_SARGANTANA_DCACHE_BUS_WIDTH
+parameter DCACHE_BUS_WIDTH = `CONF_SARGANTANA_DCACHE_BUS_WIDTH;
+`elsif CONF_HPDCACHE_REQ_WORDS
+parameter DCACHE_BUS_WIDTH = `CONF_HPDCACHE_REQ_WORDS * 64;
+`else
+parameter DCACHE_BUS_WIDTH = 10'd512;
+`endif
+
+parameter logic [6:0] DCACHE_MAXELEM = DCACHE_BUS_WIDTH/8;
+parameter DCACHE_MAXELEM_LOG = $clog2(DCACHE_MAXELEM);
+
 
 typedef logic [REGFILE_WIDTH-1:0] reg_t;
 typedef reg   [riscv_pkg::XLEN-1:0] regPC_t;
@@ -82,6 +102,10 @@ parameter INSTRUCTION_QUEUE_NUM_ENTRIES = 16;
 parameter NUM_PHISICAL_REGISTERS = 64;
 parameter PHISICAL_REGFILE_WIDTH = 6;
 typedef logic [PHISICAL_REGFILE_WIDTH-1:0] phreg_t;
+parameter PHY_VIRT_MAX_ADDR_SIZE = (PHY_ADDR_SIZE < VIRT_ADDR_SIZE) ? VIRT_ADDR_SIZE : PHY_ADDR_SIZE;
+
+
+
 
 // Physical fp registers 
 parameter NUM_PHYSICAL_FREGISTERS = 64;
@@ -159,6 +183,14 @@ typedef struct packed {
     branch_pred_decision_t decision;    // Taken or not taken
     addrPC_t pred_addr;                 // Predicted Address
 } branch_pred_t;            // Struct for Branch Prediction
+
+function automatic logic range_check(addr_t start_region, addr_t end_region, bus64_t address);
+    // if len is a power of two, and base is properly aligned, this check could be simplified
+    return (address >= {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, start_region}) && (address < {{{64-PHY_VIRT_MAX_ADDR_SIZE}{1'b0}}, end_region});
+endfunction : range_check
+
+
+
 
 typedef struct packed {
     riscv_pkg::exception_cause_t cause; // Cause of exception vector 64 bits
@@ -249,6 +281,8 @@ typedef enum logic [7:0] {
    AMO_SWAPD, AMO_ADDD, AMO_ANDD, AMO_ORD, AMO_XORD, AMO_MAXD, AMO_MAXDU, AMO_MIND, AMO_MINDU,
    // Multiplications
    MUL, MULH, MULHU, MULHSU, MULW,
+
+    VLE, VLM, VL1R, VSE, VSM, VS1R, VLSE, VSSE, VLXE, VSXE, VLEFF,
    // Divisions
    DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
    // Floating-Point Load and Store Instructions
@@ -1056,5 +1090,150 @@ typedef struct packed {
     longint unsigned fflags_wr_valid;
 } commit_data_t;
 `endif
+
+typedef struct packed {
+    logic commit_valid0;
+    logic commit_xcpt;
+    logic [4:0] commit_xcpt_cause;
+    logic stall_if_1;       
+    logic stall_if_2;      
+    logic stall_id;         
+    logic stall_iq;             
+    logic stall_rr;       
+    logic stall_exe;       
+    logic stall_commit;   
+    logic flush_if;
+    logic flush_rr;
+} visa_signals_t;
+
+typedef struct packed {
+    // Triggers a halt on the pipeline 
+    logic           halt_req;
+    // Triggers a restart on the pipeline
+    logic           resume_req;
+    // The core starts to fetch from the debug program buffer
+    logic           progbuf_req;
+    // Indicates that the core should halt after exiting form a reset
+    logic           halt_on_reset;
+} debug_contr_in_t;
+
+typedef struct packed {
+    // Rename read request 
+    logic           rnm_read_en;
+    // Virtual register address that needs to be renamed 
+    reg_t           rnm_read_reg;
+    // Register file read request 
+    logic           rf_en;
+    // Physical register address that needs to be read/write
+    phreg_t         rf_preg;
+    // Write enable of the register file 
+    logic           rf_we;
+    // Data to be written 
+    bus64_t         rf_wdata;
+} debug_reg_in_t;
+
+typedef struct packed {
+    // ACKs the halt of the pipeline 
+    logic           halt_ack;
+    // The pipelines is halted
+    logic           halted;
+    // ACKs the restart of the pipeline
+    logic           resume_ack;
+    // The pipeline is running
+    logic           running;
+    // ACKs the probram buffer execution request
+    logic           progbuf_ack;
+    // The pipeline is halted and is not executing from the probram buffer (parked state)
+    logic           parked;
+    // Indicates if the debugging is unavailable
+    logic           unavail;
+    // The execution of the program buffer stopped because of an exception
+    logic           progbuf_xcpt;
+    // ACKs the reset of the pipeline 
+    logic           havereset;
+} debug_contr_out_t;
+
+typedef struct packed {
+    // Response of a rename request 
+    phreg_t         rnm_read_resp;
+    // Response form a read request
+    bus64_t         rf_rdata;
+} debug_reg_out_t;
+typedef struct packed {
+    // Memory Map Config
+    int                                       NIOSections;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOBase;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitIOEnd;
+
+    int                                       NMappedSections;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMappedBase;
+    logic [NrMaxRules-1:0][PHY_ADDR_SIZE-1:0] InitMappedEnd;
+
+    logic [PHY_ADDR_SIZE-1:0] InitBROMBase;
+    logic [PHY_ADDR_SIZE-1:0] InitBROMEnd;
+
+    logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferBase;
+    logic [PHY_ADDR_SIZE-1:0] DebugProgramBufferEnd;
+
+    // DCache Config
+    int unsigned DCacheNumSets;    // Number of sets
+    int unsigned DCacheNumWays;    // Number of ways
+    int unsigned DCacheLineWidth;  // Cacheline width in bits
+    int unsigned DCacheMSHRSets;   // Number of MSHR sets
+    int unsigned DCacheMSHRWays;   // Number of MSHR ways
+    int unsigned DCacheWBUFSize;   // Number of entries in Write Buffer
+    int unsigned DCacheWTNotWB;    // 0: Write-through; 1: Write-back
+    int unsigned DCacheCoalescing; // 0: Disable Coalescing; 1: Enable Coalescing
+    int unsigned DCacheWBUFTh;     // WBUF Threshold before closing coalescing entry
+
+    // Memory Interface Config
+    int unsigned MemAddrWidth; // Address width in bits
+    int unsigned MemDataWidth; // Data width in bits
+    int unsigned MemIDWidth;   // Request/Response ID width in bits
+} drac_cfg_t;
+
+localparam drac_cfg_t DracDefaultConfig = '{
+    NIOSections: 1, // number of IO space sections
+    InitIOBase:  {40'h40000000}, // IO base 0 address after reset
+    InitIOEnd:  {40'h80000000}, // IO end 0 address after reset
+
+    NMappedSections: 3, // number of Memory space sections
+    InitMappedBase: {40'h0040000000, 40'h0000000100, 40'h0000010000}, // Memory base address after reset
+    InitMappedEnd: {40'h3fffffffff, 40'h000000ffff, 40'h0000010020}, // Memory end 0 address after reset
+
+    InitBROMBase: 40'h0000000100,
+    InitBROMEnd: 40'h000000ffff,
+
+    DebugProgramBufferBase: 40'h0000010000,
+    DebugProgramBufferEnd:  40'h0000010020,
+
+    // DCache Config
+    DCacheNumSets: 128,
+    DCacheNumWays: 4,
+    DCacheLineWidth: 512,
+    DCacheMSHRSets: 32,
+    DCacheMSHRWays: 2,
+    DCacheWBUFSize: 16,
+    DCacheWTNotWB: 1,
+    DCacheCoalescing: 0,
+    DCacheWBUFTh: 2,
+
+    // Memory Interface Config
+    MemAddrWidth: 40,
+    MemDataWidth: 512,
+    MemIDWidth: 8
+};
+
+function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, bus64_t address);
+    // if we don't specify any region we assume everything is accessible
+    logic[NrMaxRules-1:0] pass;
+    pass = '0;
+    for (int unsigned k = 0; k < Cfg.NIOSections; k++) begin
+        pass[k] = range_check(Cfg.InitIOBase[k], Cfg.InitIOEnd[k], address);
+    end
+    return |pass;
+endfunction : is_inside_IO_sections
+
+
 
 endpackage
