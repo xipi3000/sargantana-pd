@@ -899,7 +899,7 @@ typedef struct packed {
     logic         vxsat;     // vector fixed-point accrued saturation flag
 } vcsr_t;
 
-
+localparam logic [63:0] SSTATUS_VS     = 64'h00000600;
 
 
 

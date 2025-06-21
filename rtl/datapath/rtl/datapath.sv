@@ -84,6 +84,7 @@ module datapath
     
     // Decode
     id_ir_stage_t decoded_instr;
+    id_ir_stage_t [1:0] decoded_instr_S;
     id_ir_stage_t stored_instr_id_d;
     id_ir_stage_t stored_instr_id_q;
     id_ir_stage_t [1:0] selection_id_ir_S;
@@ -91,7 +92,7 @@ module datapath
     id_cu_t id_cu_int;
     jal_id_if_t jal_id_if_int;
     
-    logic src_select_id_ir_q;
+    logic src_select_id_ir_q_S;
     
     // Rename and free list
     id_ir_stage_t [drac_pkg::NUM_SCALAR_INSTR:0] stage_iq_ir_q_S;
@@ -137,7 +138,7 @@ module datapath
 
     logic src_select_ir_rr_q;
 
-    ir_cu_t ir_cu_int;
+    ir_cu_t_S ir_cu_int_Ss;
     cu_ir_t cu_ir_int;
 
     reg_t [1:0] free_list_read_src1_int_S;
@@ -319,7 +320,7 @@ module datapath
         .miss_icache_i(miss_icache),
         .ready_icache_i(req_icache_ready_i),
         .id_cu_i(id_cu_int),
-        .ir_cu_i(ir_cu_int),
+        .ir_cu_i_Ss(ir_cu_int_Ss),
         .cu_ir_o(cu_ir_int),
         .rr_cu_i(rr_cu_int),
         .cu_rr_o(cu_rr_int),
@@ -339,7 +340,7 @@ module datapath
         .debug_wr_valid_i(debug_i.reg_write_valid),
         .commit_cu_i(commit_cu_int),
         .cu_commit_o(cu_commit_int),
-        .pmu_jump_misspred_o(pmu_flags_o.branch_miss)
+        .pmu_jump_misspred_o({pmu_flags_o_S[0].branch_miss,pmu_flags_o_S[0].branch_miss})
     );
 
     // Combinational logic select the jump addr
@@ -462,12 +463,13 @@ module datapath
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     always_comb begin
         for (int i = 0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
-            stored_instr_id_d_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr_S[i] : stored_instr_id_q_S[i];
+            stored_instr_id_d_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr : stored_instr_id_q_S[i];
             //TODO: CONFLICTS WITH DEBUG
             free_list_read_src1_int_S[i] = (debug_i.reg_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_addr : stage_iq_ir_q_S[i].instr.rs1;
         end
     end
-    assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
+    //TODO: CHECK THIS TO SCALAR
+    assign debug_o.reg_list_paddr = stage_no_stall_rr_q_Ss.prs1[0];
 
     // Register ID to IR when stall
     register #($bits(id_ir_stage_t)*(drac_pkg::NUM_SCALAR_INSTR)) reg_id_inst(
@@ -487,7 +489,7 @@ module datapath
 
     always_comb begin
          for (int i = 0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
-            selection_id_ir_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr_S[i] : stored_instr_id_q_S[i];
+            selection_id_ir_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr : stored_instr_id_q_S[i];
          end
 
         //if(selection_id_ir_S)
@@ -504,7 +506,7 @@ module datapath
         .read_head_S_i    ({~control_int_S[0].stall_iq,
                         (is_iq_2_empty) ? ~control_int_S[0].stall_iq : 'h0}),
         .instruction_S_o  (stage_iq_ir_q_0),
-        .full_o         (ir_cu_int.full_iq),
+        .full_o         (ir_cu_int_Ss.full_iq[0]),
         .empty_o        ()
     );
     instruction_queue instruction_queue_inst_2(
@@ -516,7 +518,7 @@ module datapath
                         }), 
         .read_head_S_i    ({~control_int_S[1].stall_iq,'h0}),
         .instruction_S_o  (stage_iq_ir_q_1),
-        .full_o         (ir_cu_int.full_iq),
+        .full_o         (ir_cu_int_Ss.full_iq[1]),
         .empty_o        (is_iq_2_empty)
     );
 
@@ -581,9 +583,9 @@ module datapath
         .delete_checkpoint_i(cu_ir_int.delete_checkpoint),
         .recover_checkpoint_i(cu_ir_int.recover_checkpoint),
         .recover_commit_i(cu_ir_int.recover_commit), 
-        .commit_old_dst_i({instruction_to_commit[1].rd, instruction_to_commit[0].rd}),    
-        .commit_write_dst_i(cu_ir_int.enable_commit_update),  
-        .commit_new_dst_i({instruction_to_commit[1].prd, instruction_to_commit[0].prd}),
+        .commit_old_dst_S_i({instruction_to_commit[1].rd, instruction_to_commit[0].rd}),    
+        .commit_write_dst_S_i({cu_ir_int.enable_commit_update,cu_ir_int.enable_commit_update}),  
+        .commit_new_dst_S_i({instruction_to_commit[1].prd, instruction_to_commit[0].prd}),
         .src1_S_o(stage_no_stall_rr_q_Ss.prs1),
         .rdy1_S_o(stage_no_stall_rr_q_Ss.rdy1),
         .src2_S_o(stage_no_stall_rr_q_Ss.prs2),
@@ -639,20 +641,24 @@ module datapath
     assign stage_no_stall_rr_q_Ss.chkp = checkpoint_rename;
 
     // Signals for Control Unit
-    assign ir_cu_int.valid                   = stage_iq_ir_q.instr.valid;
-    assign ir_cu_int.empty_free_list         = free_list_empty;
-    assign ir_cu_int.out_of_checkpoints      = out_of_checkpoints_rename;
-    assign ir_cu_int.fp_out_of_checkpoints   = fp_out_of_checkpoints_rename;
-    assign ir_cu_int.is_branch               = (stage_iq_ir_q.instr.instr_type == BLT)  ||
-                                               (stage_iq_ir_q.instr.instr_type == BLTU) ||
-                                               (stage_iq_ir_q.instr.instr_type == BGE)  ||
-                                               (stage_iq_ir_q.instr.instr_type == BGEU) ||
-                                               (stage_iq_ir_q.instr.instr_type == BEQ)  ||
-                                               (stage_iq_ir_q.instr.instr_type == BNE)  ||
-                                               (stage_iq_ir_q.instr.instr_type == JALR);
+    
+
     always_comb begin
         stage_ir_rr_d_S = stage_iq_ir_q_S;
+        ir_cu_int_Ss.empty_free_list         = free_list_empty;
+        ir_cu_int_Ss.out_of_checkpoints      = out_of_checkpoints_rename;
+        ir_cu_int_Ss.fp_out_of_checkpoints   = fp_out_of_checkpoints_rename;
         for (int i=0; i< drac_pkg::NUM_SCALAR_INSTR; i++) begin
+
+            ir_cu_int_Ss.valid[i]                  = stage_iq_ir_q_S[i].instr.valid;
+            ir_cu_int_Ss.is_branch[i]               = (stage_iq_ir_q_S[i].instr.instr_type == BLT)  ||
+                                                    (stage_iq_ir_q_S[i].instr.instr_type == BLTU) ||
+                                                    (stage_iq_ir_q_S[i].instr.instr_type == BGE)  ||
+                                                    (stage_iq_ir_q_S[i].instr.instr_type == BGEU) ||
+                                                    (stage_iq_ir_q_S[i].instr.instr_type == BEQ)  ||
+                                                    (stage_iq_ir_q_S[i].instr.instr_type == BNE)  ||
+                                                    (stage_iq_ir_q_S[i].instr.instr_type == JALR);
+
             stage_ir_rr_d_S[i].instr.valid = stage_iq_ir_q_S[i].instr.valid & (~control_int.stall_iq); 
         end
     end 
@@ -1082,12 +1088,12 @@ module datapath
         .req_cpu_dcache_o(req_cpu_dcache_o),
 
         //PMU Neiel-Leyva
-        .pmu_is_branch_o          (pmu_flags_o[0].is_branch),      
-        .pmu_branch_taken_o       (pmu_flags_o[0].branch_taken),   
-        .pmu_stall_mem_o          (pmu_flags_o[0].stall_wb),
+        .pmu_is_branch_o          (pmu_flags_o_S[0].is_branch),      
+        .pmu_branch_taken_o       (pmu_flags_o_S[0].branch_taken),   
+        .pmu_stall_mem_o          (pmu_flags_o_S[0].stall_wb),
         .pmu_exe_ready_o          (pmu_exe_ready),
-        .pmu_struct_depend_stall_o(pmu_flags_o[0].struct_depend),
-        .pmu_load_after_store_o   (pmu_flags_o[0].stall_rr)
+        .pmu_struct_depend_stall_o(pmu_flags_o_S[0].struct_depend),
+        .pmu_load_after_store_o   (pmu_flags_o_S[0].stall_rr)
     );
 
     exe_stage_red exe_stage_red_inst(
@@ -1106,11 +1112,11 @@ module datapath
         .mul_div_to_scalar_wb_o(exe_to_wb_scalar[1]),
         .exe_cu_o(exe_cu_int),
         //PMU Neiel-Leyva
-        .pmu_is_branch_o          (pmu_flags_o[1].is_branch),      
-        .pmu_branch_taken_o       (pmu_flags_o[1].branch_taken),   
-        .pmu_stall_mem_o          (pmu_flags_o[1].stall_wb),
+        .pmu_is_branch_o          (pmu_flags_o_S[1].is_branch),      
+        .pmu_branch_taken_o       (pmu_flags_o_S[1].branch_taken),   
+        .pmu_stall_mem_o          (pmu_flags_o_S[1].stall_wb),
         .pmu_exe_ready_o          (pmu_exe_ready),
-        .pmu_struct_depend_stall_o(pmu_flags_o[1].struct_depend),
+        .pmu_struct_depend_stall_o(pmu_flags_o_S[1].struct_depend),
     );
 
 
@@ -1128,7 +1134,7 @@ module datapath
         for ( int i=drac_pkg::NUM_SCALAR_INSTR-1; i>=0; i--) begin
             if(exe_if_branch_pred_int_S[i].is_branch_exe) begin
                 exe_if_branch_pred_int = exe_if_branch_pred_int_S[i];
-                correct_branch_pred = correct_branch_pred_s[i];
+                correct_branch_pred = correct_branch_pred_S[i];
             end
         end
     end
@@ -1421,8 +1427,8 @@ module datapath
         .id_stall(control_int.stall_id),
         .id_flush(flush_int.flush_id),
 
-        .ir_valid(stage_iq_ir_q.instr.valid),
-        .ir_id(stage_iq_ir_q.instr.id),
+        .ir_valid(stage_iq_ir_q_S[0].instr.valid),
+        .ir_id(stage_iq_ir_q_S[0].instr.id),
         .ir_stall(control_int.stall_ir),
         .ir_flush(flush_int.flush_ir),
 
@@ -1493,17 +1499,20 @@ module datapath
     // Register File read 
     assign debug_o.reg_read_data = stage_rr_exe_d_Ss.data_rs1;
 
-
+    always_comb begin
     //PMU
-    assign pmu_flags_o.stall_if        = resp_csr_cpu_i.csr_stall ;
-    
-    assign pmu_flags_o.stall_id        = control_int.stall_id || ~decoded_instr.instr.valid;
-    assign pmu_flags_o.stall_exe       = control_int.stall_exe || ~reg_to_exe_Ss.instr.valid;
-    assign pmu_flags_o.load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int[0] || instruction_to_commit[0].mem_type == LOAD);
-    assign pmu_flags_o.data_depend     = ~pmu_exe_ready && ~pmu_flags_o.stall_exe;
-    assign pmu_flags_o.grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
-    assign pmu_flags_o.free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
+        for(int i =0; i<drac_pkg::NUM_SCALAR_INSTR; i++) begin
+            pmu_flags_o_S[i].stall_if        = resp_csr_cpu_i.csr_stall ;
+        
+            pmu_flags_o_S[i].stall_id        = control_int.stall_id || ~decoded_instr.instr.valid;
+            pmu_flags_o_S[i].stall_exe       = control_int.stall_exe || ~reg_to_exe_Ss.instr.valid;
+            pmu_flags_o_S[i].load_store      = (~commit_cu_int.stall_commit) && (commit_store_or_amo_int[0] || instruction_to_commit[0].mem_type == LOAD);
+            pmu_flags_o_S[i].data_depend     = ~pmu_exe_ready && ~pmu_flags_o_S[i].stall_exe;
+            pmu_flags_o_S[i].grad_list_full  = rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
+            pmu_flags_o_S[i].free_list_empty = free_list_empty && ~rr_cu_int.gl_full && ~resp_csr_cpu_i.csr_stall && ~exe_cu_int.stall;
 
+        end 
+    end
     /*
     (* keep="TRUE" *) (* mark_debug="TRUE" *) gl_instruction_t [1:0] instruction_to_commit_reg;
     (* keep="TRUE" *) (* mark_debug="TRUE" *) commit_cu_t commit_cu_int_reg;

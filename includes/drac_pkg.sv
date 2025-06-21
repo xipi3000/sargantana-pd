@@ -671,6 +671,17 @@ typedef struct packed {
 } ir_cu_t;      // Rename to Control Unit
 
 typedef struct packed {
+    logic [1:0] valid;                        // Valid instruction
+    logic [1:0] full_iq;                      // Instruction Queue full
+    logic out_of_checkpoints;           // Rename out of checkpoints
+    logic fp_out_of_checkpoints;        // FP Rename out of checkpoints
+    logic  empty_free_list;              // Free list out of registers
+    logic fp_empty_free_list;           // FP Free list out of registers
+    logic [1:0] is_branch;                    // Rename instruction is a branch
+} ir_cu_t_S;      // Rename to Control Unit
+
+
+typedef struct packed {
     logic gl_full;  // CSR or fence
 } rr_cu_t;      // Read Register to Control Unit 
 
@@ -1233,6 +1244,16 @@ function automatic logic is_inside_IO_sections (drac_cfg_t Cfg, bus64_t address)
     end
     return |pass;
 endfunction : is_inside_IO_sections
+
+function automatic logic is_inside_mapped_sections (drac_cfg_t Cfg, bus64_t address);
+    // if we don't specify any region we assume everything is accessible
+    logic[NrMaxRules-1:0] pass;
+    pass = '0;
+    for (int unsigned k = 0; k < Cfg.NMappedSections; k++) begin
+        pass[k] = range_check(Cfg.InitMappedBase[k], Cfg.InitMappedEnd[k], address);
+    end
+    return |pass;
+endfunction : is_inside_mapped_sections
 
 
 

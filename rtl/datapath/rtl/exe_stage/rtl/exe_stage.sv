@@ -439,22 +439,7 @@ always_comb begin
     end
     
 end
-always_comb begin
 
-    //TODO: THIS SHOULD NOT NEED UNIT COMPARATION
-    if (mul_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_MUL) begin
-        exe_red_wb_o = mul_to_scalar_wb;
-    end else if (div_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_DIV) begin
-        exe_red_wb_o = div_to_scalar_wb;
-    end else if (alu_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_ALU) begin
-        exe_red_wb_o = alu_to_scalar_wb;
-    end else if (branch_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_BRANCH) begin
-        exe_red_wb_o = branch_to_scalar_wb;
-    end else begin
-        exe_red_wb_o = 'h0;
-    end
-
-end
 // Branch predictor required signals
 // Program counter at Execution Stage
 assign exe_if_branch_pred_o.pc_execution = from_rr_i.instr.pc; 
@@ -477,14 +462,14 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
                                              
 
 // Data for the Control Unit
-assign exe_cu_o.valid_1 = arith_to_scalar_wb_o.valid;
-assign exe_cu_o.valid_2 = mem_to_scalar_wb_o.valid;
+assign exe_cu_o.valid_1 = exe_to_wb_o.valid; //arith_to_scalar_wb_o.valid;
+assign exe_cu_o.valid_2 = exe_to_wb_o.valid; /// mem_to_scalar_wb_o.valid;
 //assign exe_cu_o.valid_4 = mul_div_to_scalar_wb_o.valid;
-assign exe_cu_o.change_pc_ena_1 = arith_to_scalar_wb_o.change_pc_ena;
+assign exe_cu_o.change_pc_ena_1 = exe_to_wb_o.change_pc_ena; //arith_to_scalar_wb_o.change_pc_ena;
 assign exe_cu_o.valid_fp = fp_to_wb_o.valid;
-assign exe_cu_o.valid_fp_mem = mem_to_fp_wb_o.valid;
+assign exe_cu_o.valid_fp_mem = fp_to_wb_o.valid;
 assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
-assign exe_cu_o.branch_taken = arith_to_scalar_wb_o.branch_taken;
+assign exe_cu_o.branch_taken = exe_to_wb_o.branch_taken;
 assign exe_cu_o.stall = stall_int || stall_fpu_int;
 
 

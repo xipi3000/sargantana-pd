@@ -141,7 +141,7 @@ debug_in_t debug_in;
 debug_out_t debug_out;
 
 //--PMU
-to_PMU_t       pmu_flags    ;
+to_PMU_t  [1:0]      pmu_flags_S    ;
 
 logic [CSR_ADDR_SIZE-1:0] addr_csr_hpm;
 logic [63:0]              data_csr_hpm, data_hpm_csr;
@@ -198,27 +198,27 @@ hpm_counters hpm_counters_inst (
     .data_o(data_hpm_csr),
 
     // Events
-    .branch_miss_i(pmu_flags.branch_miss),
-    .is_branch_i(pmu_flags.is_branch),
-    .branch_taken_i(pmu_flags.branch_taken),
+    .branch_miss_i_S({pmu_flags_S[0].branch_miss,pmu_flags_S[1].branch_miss}),
+    .is_branch_i_S({pmu_flags_S[0].is_branch,pmu_flags_S[1].is_branch}),
+    .branch_taken_i_S({pmu_flags_S[0].branch_taken, pmu_flags_S[1].branch_taken}),
     .exe_store_i(pmu_interface_i.exe_store),
     .exe_load_i(pmu_interface_i.exe_load),
     .icache_req_i(pmu_interface_i.icache_req),
     .icache_kill_i(pmu_interface_i.icache_kill),
-    .stall_if_i(pmu_flags.stall_if),
-    .stall_id_i(pmu_flags.stall_id),
-    .stall_rr_i(pmu_flags.stall_rr),
-    .stall_exe_i(pmu_flags.stall_exe),
-    .stall_wb_i(pmu_flags.stall_wb ),
+    .stall_if_i_S({pmu_flags_S[0].stall_if,pmu_flags_S[1].stall_if}),
+    .stall_id_i_S({pmu_flags_S[0].stall_id,pmu_flags_S[1].stall_id}),
+    .stall_rr_i_S({pmu_flags_S[0].stall_rr,pmu_flags_S[1].stall_rr}),
+    .stall_exe_i_S({pmu_flags_S[0].stall_exe,pmu_flags_S[1].stall_exe}),
+    .stall_wb_i_S({pmu_flags_S[0].stall_wb ,pmu_flags_S[1].stall_wb }),
     .buffer_miss_i(pmu_interface_i.icache_miss_l2_hit),
     .imiss_kill_i(pmu_interface_i.icache_miss_kill),
     .icache_bussy_i(pmu_interface_i.icache_busy),
     .imiss_time_i(pmu_interface_i.icache_miss_time),
-    .load_store_i(pmu_flags.load_store ),
-    .data_depend_i(pmu_flags.data_depend),
-    .struct_depend_i(pmu_flags.struct_depend),
-    .grad_list_full_i(pmu_flags.grad_list_full),
-    .free_list_empty_i(pmu_flags.free_list_empty),
+    .load_store_i_S({pmu_flags_S[0].load_store,pmu_flags_S[1].load_store} ),
+    .data_depend_i_S({pmu_flags_S[0].data_depend,pmu_flags_S[1].data_depend}),
+    .struct_depend_i_S({pmu_flags_S[0].struct_depend,pmu_flags_S[1].struct_depend}),
+    .grad_list_full_i_S({pmu_flags_S[0].grad_list_full,pmu_flags_S[1].grad_list_full}),
+    .free_list_empty_i_S({pmu_flags_S[0].free_list_empty,pmu_flags_S[1].free_list_empty}),
     .itlb_access_i(pmu_interface_i.itlb_access),
     .itlb_miss_i(pmu_interface_i.itlb_miss),
     .dtlb_access_i(pmu_interface_i.dtlb_access),
@@ -257,7 +257,7 @@ datapath datapath_inst(
     .en_ld_st_translation_i(en_ld_st_translation),
     .dtlb_comm_o(dtlb_comm_o),
     //PMU                                                   
-    .pmu_flags_o        (pmu_flags)
+    .pmu_flags_o_S        (pmu_flags_S)
 );
 
 // NOTE:resp_csr_interface_datapath.csr_replay is a "ready" signal that indicate
@@ -284,7 +284,7 @@ csr_bsc csr_inst (
     .interrupt_cause_o(resp_csr_interface_datapath.csr_interrupt_cause),          // Interruption cause
 
     .time_i(time_i),                    // time passed since the core is reset
-
+    `ifdef CONF_SARGANTANA_ENABLE_PCR
     .pcr_req_ready_i(pcr_req_ready_i),            // ready bit of the pcr
     .pcr_resp_valid_i(pcr_resp_valid_i),           // ready bit of the pcr
     .pcr_resp_data_i(pcr_resp_data_i),            // read data from performance counter module
@@ -294,7 +294,7 @@ csr_bsc csr_inst (
     .pcr_req_data_o(pcr_req_data_o),             // write data to performance counter module
     .pcr_req_we_o(pcr_req_we_o),               // Cmd of the petition
     .pcr_req_core_id_o(pcr_req_core_id_o),          // core id of the tile
-
+    `endif // CONF_SARGANTANA_ENABLE_PCR
     .fcsr_flags_valid_i(req_datapath_csr_interface.csr_retire),
     .fcsr_flags_bits_i(req_datapath_csr_interface.fp_status),
     .fcsr_rm_o(fcsr_rm),
@@ -322,13 +322,7 @@ csr_bsc csr_inst (
     .vpu_csr_o(vpu_csr),
 
     // Unused interfaces
-    .pcr_update_data_i(0),
-    .pcr_update_addr_i(0),
-    .pcr_update_core_id_i(0),
-    .pcr_update_broadcast_i(0),
-    .pcr_update_valid_i(0),
-    .m_soft_irq_i(0),
-    .rocc_interrupt_i(0),
+    
 
     .perf_addr_o(addr_csr_hpm),                // read/write address to performance counter module
     .perf_data_o(data_csr_hpm),                // write data to performance counter module

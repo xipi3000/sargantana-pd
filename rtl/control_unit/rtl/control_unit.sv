@@ -28,7 +28,7 @@ module control_unit
     input logic             miss_icache_i,
     input logic             ready_icache_i,
     input id_cu_t           id_cu_i,
-    input ir_cu_t           ir_cu_i,
+    input ir_cu_t_S           ir_cu_i_Ss,
     input rr_cu_t           rr_cu_i,
     input exe_cu_t          exe_cu_i,
     input wb_cu_t           wb_cu_i,
@@ -52,7 +52,7 @@ module control_unit
     output cu_wb_t          cu_wb_o,
     output cu_commit_t      cu_commit_o,
     
-    output logic            pmu_jump_misspred_o
+    output logic  [1:0]          pmu_jump_misspred_o
 
 );
     reg csr_fence_in_pipeline;
@@ -201,8 +201,8 @@ module control_unit
                                                     (commit_cu_i.stall_csr_fence & !commit_cu_i.fence)));
 
     // logic do rename/free list checkpoint
-    assign cu_ir_o.do_checkpoint = (ir_cu_i.is_branch) &
-                                   ir_cu_i.valid &  ~(ir_cu_i.out_of_checkpoints) &
+    assign cu_ir_o.do_checkpoint = ((ir_cu_i_Ss.is_branch[0]) | (ir_cu_i_Ss.is_branch[1]))  &
+                                   (ir_cu_i_Ss.valid[0] & ir_cu_i_Ss.valid[1])&  ~(ir_cu_i_Ss.out_of_checkpoints) &
                                    ~(pipeline_flush_o.flush_ir) & ~(pipeline_ctrl_o.stall_ir);
 
     assign cu_ir_o.do_recover = (~correct_branch_pred_wb_i & wb_cu_i.checkpoint_done & wb_cu_i.valid[0]);
@@ -280,11 +280,11 @@ module control_unit
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b1;
             pipeline_flush_o.flush_exe = 1'b0;
-        end else if (ir_cu_i.empty_free_list) begin
+        end else if (ir_cu_i_Ss.empty_free_list) begin
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
-        end else if (ir_cu_i.out_of_checkpoints) begin
+        end else if (ir_cu_i_Ss.out_of_checkpoints) begin
             pipeline_flush_o.flush_ir  = 1'b0;
             pipeline_flush_o.flush_rr  = 1'b0;
             pipeline_flush_o.flush_exe = 1'b0;
@@ -301,7 +301,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;
-        end else if (ir_cu_i.full_iq) begin
+        end else if (ir_cu_i_Ss.full_iq[0] | ir_cu_i_Ss.full_iq[1]) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;
@@ -333,12 +333,12 @@ module control_unit
             pipeline_ctrl_o.stall_ir  = 1'b1;
             pipeline_ctrl_o.stall_rr  = 1'b1;
             pipeline_ctrl_o.stall_exe = 1'b0;
-        end else if (ir_cu_i.empty_free_list) begin
+        end else if (ir_cu_i_Ss.empty_free_list) begin
             pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
             pipeline_ctrl_o.stall_exe = 1'b0;
-        end else if (ir_cu_i.out_of_checkpoints) begin
+        end else if (ir_cu_i_Ss.out_of_checkpoints) begin
             pipeline_ctrl_o.stall_iq  = 1'b1;
             pipeline_ctrl_o.stall_ir  = 1'b0;
             pipeline_ctrl_o.stall_rr  = 1'b0;
@@ -385,6 +385,6 @@ module control_unit
         end
     end
     
-    assign pmu_jump_misspred_o = (id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) || ~correct_branch_pred_wb_i;
-
+    assign pmu_jump_misspred_o[0] = (id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) || ~correct_branch_pred_wb_i;
+    assign pmu_jump_misspred_o[1] = (id_cu_i.valid && !id_cu_i.is_branch && id_cu_i.predicted_as_branch) || ~correct_branch_pred_wb_i;
 endmodule

@@ -278,7 +278,7 @@ assign exe_if_branch_pred_o.is_branch_exe = (from_rr_i.instr.instr_type == BLT  
 assign exe_cu_o.valid_1 = exe_red_wb_o.valid;
 //assign exe_cu_o.valid_4 = exe_red_wb_o.valid;
 assign exe_cu_o.change_pc_ena_1 = exe_red_wb_o.change_pc_ena;
-assign exe_cu_o.is_branch = exe_if_branch_pred_o.is_branch_exe;
+assign exe_cu_o.is_branch = exe_red_wb_o.is_branch_exe;
 assign exe_cu_o.branch_taken = exe_red_wb_o.branch_taken;
 assign exe_cu_o.stall = stall_int;
 
