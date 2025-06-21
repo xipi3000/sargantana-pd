@@ -47,7 +47,7 @@ module datapath
     output debug_out_t      debug_o,
     output cache_tlb_comm_t dtlb_comm_o,
     //--PMU   
-    output to_PMU_t [NUM_SCALAR_INSTR]        pmu_flags_o_S
+    output to_PMU_t [drac_pkg::NUM_SCALAR_INSTR-1 : 0]        pmu_flags_o_S
 );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,9 +94,9 @@ module datapath
     logic src_select_id_ir_q;
     
     // Rename and free list
-    id_ir_stage_t [NUM_SCALAR_INSTR:0] stage_iq_ir_q_S;
-    id_ir_stage_t [NUM_SCALAR_INSTR:0] stage_iq_ir_q_0;
-    id_ir_stage_t [NUM_SCALAR_INSTR:0] stage_iq_ir_q_1;
+    id_ir_stage_t [drac_pkg::NUM_SCALAR_INSTR:0] stage_iq_ir_q_S;
+    id_ir_stage_t [drac_pkg::NUM_SCALAR_INSTR:0] stage_iq_ir_q_0;
+    id_ir_stage_t [drac_pkg::NUM_SCALAR_INSTR:0] stage_iq_ir_q_1;
     id_ir_stage_t stage_ir_rr_d;
     ir_rr_stage_t_S stage_ir_rr_q_Ss;
     ir_rr_stage_t_S stage_stall_rr_q_Ss;
@@ -127,7 +127,7 @@ module datapath
     logic free_list_empty;
     logic fp_free_list_empty;
 
-    phreg_t [NUM_SCALAR_INSTR-1:0]  free_register_to_rename_S;
+    phreg_t [drac_pkg::NUM_SCALAR_INSTR-1:0]  free_register_to_rename_S;
     phfreg_t fp_free_register_to_rename;
 
     checkpoint_ptr checkpoint_free_list;
@@ -146,15 +146,15 @@ module datapath
     rr_exe_instr_t_S stage_rr_exe_d_Ss;
     rr_exe_instr_t_S stage_rr_exe_q_Ss;
 
-    bus64_t [NUM_SCALAR_INSTR-1:0] rr_data_scalar_src1_S;
-    bus64_t [NUM_SCALAR_INSTR-1:0] rr_data_scalar_src2_S;
+    bus64_t [drac_pkg::NUM_SCALAR_INSTR-1:0] rr_data_scalar_src1_S;
+    bus64_t [drac_pkg::NUM_SCALAR_INSTR-1:0] rr_data_scalar_src2_S;
     bus64_t rr_data_fp_src1;
     bus64_t rr_data_fp_src2;
 
     logic [drac_pkg::NUM_SCALAR_WB-1:0] snoop_rr_rs1;
     logic [drac_pkg::NUM_SCALAR_WB-1:0] snoop_rr_rs2;
-    logic [NUM_SCALAR_INSTR-1:0] snoop_rr_rdy1_S;
-    logic [NUM_SCALAR_INSTR-1:0] snoop_rr_rdy2_S;
+    logic [drac_pkg::NUM_SCALAR_INSTR-1:0] snoop_rr_rdy1_S;
+    logic [drac_pkg::NUM_SCALAR_INSTR-1:0] snoop_rr_rdy2_S;
     logic snoop_rr_vrdy1;
     logic snoop_rr_vrdy2;
     logic snoop_rr_vrdym;
@@ -171,19 +171,19 @@ module datapath
 
     logic is_csr_int;
     reg_csr_addr_t csr_addr_int;
-    exception_t [NUM_SCALAR_INSTR-1 : 0] ex_gl_in_int;
+    exception_t [drac_pkg::NUM_SCALAR_INSTR-1 : 0] ex_gl_in_int;
 
     bus64_t result_gl_out_int;
     reg_csr_addr_t csr_addr_gl_out_int;
     exception_t ex_gl_out_int;
 
-    exception_t [NUM_SCALAR_INSTR] interrupt_ex_S;
+    exception_t [drac_pkg::NUM_SCALAR_INSTR-1:0] interrupt_ex_S;
 
     exception_t ex_from_exe_int;
     gl_index_t ex_from_exe_index_int;
     // Graduation List
 
-    gl_instruction_t [NUM_SCALAR_INSTR-1:0] instruction_decode_gl_S;
+    gl_instruction_t [drac_pkg::NUM_SCALAR_INSTR-1:0] instruction_decode_gl_S;
     
     gl_wb_data_t [drac_pkg::NUM_SCALAR_WB-1:0] instruction_writeback_gl;
     gl_index_t       [drac_pkg::NUM_SCALAR_WB-1:0] gl_index;
@@ -228,20 +228,20 @@ module datapath
     bus64_t exe_data_frs2;
     bus64_t exe_data_frs3;
     rr_exe_instr_t_S reg_to_exe_Ss;
-    rr_exe_instr_t [NUM_SCALAR_INSTR:0] reg_to_exe_S;
+    rr_exe_instr_t [drac_pkg::NUM_SCALAR_INSTR:0] reg_to_exe_S;
     // This addresses are fixed from lowrisc
     reg_addr_t io_base_addr;
 
     // codifies if the branch was correctly predicted 
     // this signal goes from exe stage to fetch stage
     logic correct_branch_pred;
-    logic [NUM_SCALAR_INSTR-1:0] correct_branch_pred_S;
+    logic [drac_pkg::NUM_SCALAR_INSTR-1:0] correct_branch_pred_S;
     // WB->Commit
     wb_cu_t wb_cu_int;
     cu_wb_t cu_wb_int;
     
     exe_if_branch_pred_t exe_if_branch_pred_int;   
-    exe_if_branch_pred_t [NUM_SCALAR_INSTR-1:0] exe_if_branch_pred_int_S;   
+    exe_if_branch_pred_t [drac_pkg::NUM_SCALAR_INSTR-1:0] exe_if_branch_pred_int_S;   
 
     // Commit signals
     commit_cu_t commit_cu_int;
@@ -289,7 +289,7 @@ module datapath
     // Debug signals
     bus64_t    reg_wr_data;
     phreg_t    reg_wr_addr;
-    phreg_t [NUM_SCALAR_INSTR-1:0]   reg_prd1_addr_S;
+    phreg_t [drac_pkg::NUM_SCALAR_INSTR-1:0]   reg_prd1_addr_S;
     // stall IF
     logic stall_if;
     logic miss_icache;
@@ -470,7 +470,7 @@ module datapath
     assign debug_o.reg_list_paddr = stage_no_stall_rr_q.prs1;
 
     // Register ID to IR when stall
-    register #($bits(id_ir_stage_t)*(NUM_SCALAR_INSTR)) reg_id_inst(
+    register #($bits(id_ir_stage_t)*(drac_pkg::NUM_SCALAR_INSTR)) reg_id_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_id),
@@ -487,11 +487,10 @@ module datapath
 
     always_comb begin
          for (int i = 0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
-            selection_id_ir_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr_S[i] : stored_instr_id_q_S[i],
+            selection_id_ir_S[i] = (src_select_id_ir_q_S[i]) ? decoded_instr_S[i] : stored_instr_id_q_S[i];
          end
 
-        if(selection_id_ir_S)
-
+        //if(selection_id_ir_S)
 
     end
     
@@ -653,12 +652,12 @@ module datapath
                                                (stage_iq_ir_q.instr.instr_type == JALR);
     always_comb begin
         stage_ir_rr_d_S = stage_iq_ir_q_S;
-        for (int i; i< NUM_SCALAR_INSTR; i++) begin
+        for (int i=0; i< drac_pkg::NUM_SCALAR_INSTR; i++) begin
             stage_ir_rr_d_S[i].instr.valid = stage_iq_ir_q_S[i].instr.valid & (~control_int.stall_iq); 
         end
     end 
     // Register IR to RR
-    register #($bits(id_ir_stage_t) * (NUM_SCALAR_INSTR) + $bits(phreg_t) + $bits(phreg_t) + $bits(logic)) reg_ir_inst(
+    register #($bits(id_ir_stage_t) * (drac_pkg::NUM_SCALAR_INSTR) + $bits(phreg_t) + $bits(phreg_t) + $bits(logic)) reg_ir_inst(
         .clk_i(clk_i),
         .rstn_i(rstn_i),
         .flush_i(flush_int.flush_ir),
@@ -682,7 +681,7 @@ module datapath
         src_select_ir_rr_q <= !control_int.stall_ir;
     end
     always_comb begin
-        for(int i=0; i< NUM_SCALAR_INSTR; i++) begin
+        for(int i=0; i< drac_pkg::NUM_SCALAR_INSTR; i++) begin
             if (src_select_ir_rr_q) begin
                 stage_ir_rr_q_Ss.instr = stage_no_stall_rr_q_Ss.instr;
                 stage_ir_rr_q_Ss.ex = stage_no_stall_rr_q_Ss.ex;
@@ -731,9 +730,9 @@ module datapath
 
     always_comb begin
 
-        for(int i =0; i<NUM_SCALAR_INSTR; i++) begin
+        for(int i =0; i<drac_pkg::NUM_SCALAR_INSTR; i++) begin
             instruction_decode_gl_S[i].valid                  = stage_ir_rr_q_Ss.instr[i][i].valid & (~control_int.stall_rr);
-            instruction_decode_gl_S[i].instr[i]_type             = stage_ir_rr_q_Ss.instr[i].instr_type;
+            instruction_decode_gl_S[i].instr[i].instr_type             = stage_ir_rr_q_Ss.instr[i].instr_type;
             instruction_decode_gl_S[i].rd                     = stage_ir_rr_q_Ss.instr[i].rd;
             instruction_decode_gl_S[i].rs1                    = stage_ir_rr_q_Ss.instr[i].rs1;
             instruction_decode_gl_S[i].pc                     = stage_ir_rr_q_Ss.instr[i].pc;
@@ -827,7 +826,7 @@ module datapath
         snoop_rr_frdy3 = 1'b0;
         
         for (int i = 0; i<NUM_SCALAR_WB; ++i) begin
-            for(int j =0; j<NUM_SCALAR_INSTR; j++)begin
+            for(int j =0; j<drac_pkg::NUM_SCALAR_INSTR; j++)begin
                 snoop_rr_rdy1_S[j] |= cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q_Ss.prs1[j]) & (stage_ir_rr_q_Ss.instr[j].rs1!= 0);
                 snoop_rr_rdy2_S[j] |= cu_rr_int.snoop_enable[i] & (write_paddr_exe[i] == stage_ir_rr_q_Ss.prs2[j]) & (stage_ir_rr_q_Ss.instr[j].rs2!= 0);
             end
@@ -839,7 +838,7 @@ module datapath
             snoop_rr_frdy3 |= cu_rr_int.fwrite_enable[i] & (fp_write_paddr_exe[i] == stage_ir_rr_q_Ss.fprs3);
         end
 
-        for(int i =0; i<NUM_SCALAR_INSTR; i++) begin
+        for(int i =0; i<drac_pkg::NUM_SCALAR_INSTR; i++) begin
             reg_prd1_addr_S[i]  = (debug_i.reg_p_read_valid  && debug_i.halt_valid)  ? debug_i.reg_read_write_paddr : stage_ir_rr_q_Ss.prs1[i];
         end
     end
@@ -879,7 +878,7 @@ module datapath
 
     // Decide from which Regfile to Read FP
     always_comb begin : read_src
-        for(int i=0; i<NUM_SCALAR_INSTR;i++) begin
+        for(int i=0; i<drac_pkg::NUM_SCALAR_INSTR;i++) begin
             if (stage_ir_rr_q_Ss.instr[i].use_fs1) begin
                 stage_rr_exe_d_Ss.data_rs1[i] = rr_data_fp_src1;
             end else begin // From Scalar
@@ -895,7 +894,7 @@ module datapath
 
     always_comb begin
         stage_rr_exe_d_Ss.instr = stage_ir_rr_q_Ss.instr;
-        for(int i=0; i<NUM_SCALAR_INSTR;i++) begin
+        for(int i=0; i<drac_pkg::NUM_SCALAR_INSTR;i++) begin
             //TODO:CHEKC resp_csr_cpu_i
             stage_rr_exe_d_Ss.instr[i].valid = stage_ir_rr_q_Ss.instr[i].valid && !(stage_ir_rr_q_Ss.instr[i].ex_valid | resp_csr_cpu_i.csr_interrupt);
             stage_rr_exe_d_Ss.instr[i].ex_valid = stage_ir_rr_q_Ss.instr[i].ex_valid | resp_csr_cpu_i.csr_interrupt;
@@ -960,7 +959,7 @@ module datapath
 
         //snoop_exe_rdy1 = |snoop_exe_rs1;
         //snoop_exe_rdy2 = |snoop_exe_rs2;
-        for (int i=0; i<NUM_SCALAR_INSTR; ++i) begin
+        for (int i=0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
         exe_data_rs1[i] = snoop_exe_rs1[i] ? (snoop_exe_data_rs1_S[i]) : stage_rr_exe_q_Ss.data_rs1[i];
         exe_data_rs2[i] = snoop_exe_rs2[i] ? (snoop_exe_data_rs2_S[i]) : stage_rr_exe_q_Ss.data_rs2[i];
         
@@ -1002,11 +1001,11 @@ module datapath
     assign reg_to_exe_Ss.gl_index = stage_rr_exe_q_Ss.gl_index;
 
     always_comb begin
-        for(int i =0; i<NUM_SCALAR_INSTR; i++) begin
+        for(int i =0; i<drac_pkg::NUM_SCALAR_INSTR; i++) begin
             reg_to_exe_S[i].instr = stage_rr_exe_q_Ss.instr[i];
             reg_to_exe_S[i].data_rs1 = (stage_rr_exe_q_Ss.instr[i].use_fs1) ? exe_data_frs1 : exe_data_rs1[i];
             reg_to_exe_S[i].data_rs2 = (stage_rr_exe_q_Ss.instr[i].use_fs2) ? exe_data_frs2 : exe_data_rs2[i];
-            reg_to_exe_S[i]s.data_rs3 = exe_data_frs3;
+            reg_to_exe_S[i].data_rs3 = exe_data_frs3;
             
             reg_to_exe_S[i].prs1 = stage_rr_exe_q_Ss.prs1[i];
             reg_to_exe_S[i].rdy1 = snoop_exe_rdy1 | stage_rr_exe_q_Ss.rdy1[i];
@@ -1126,10 +1125,10 @@ module datapath
         .output_o({wb_scalar[0], wb_scalar[1], wb_fp[0]})
     );
     always_comb begin
-        for ( int i=NUM_SCALAR_INSTR-1; i>=0; i--) begin
+        for ( int i=drac_pkg::NUM_SCALAR_INSTR-1; i>=0; i--) begin
             if(exe_if_branch_pred_int_S[i].is_branch_exe) begin
-                exe_if_branch_pred_int = exe_if_branch_pred_int_S[i]
-                correct_branch_pred = correct_branch_pred_s[i]
+                exe_if_branch_pred_int = exe_if_branch_pred_int_S[i];
+                correct_branch_pred = correct_branch_pred_s[i];
             end
         end
     end
