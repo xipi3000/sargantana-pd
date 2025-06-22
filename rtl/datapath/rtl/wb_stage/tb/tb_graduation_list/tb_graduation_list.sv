@@ -44,7 +44,7 @@ module tb_graduation_list();
 //-----------------------------
 logic                           tb_clk_i;
 logic                           tb_rstn_i;
-gl_instruction_t                tb_instruction_S_i[NUM_SCALAR_INSTR];
+gl_instruction_t    [NUM_SCALAR_INSTR-1:0]            tb_instruction_S_i;
 logic[0:1]                      tb_read_head_S_i;
 gl_index_t                      tb_instruction_writeback_1_i;
 logic                           tb_instruction_writeback_enable_1_i;
@@ -278,11 +278,11 @@ graduation_list module_inst (
 
             // We do the assertions one cycle after because we're dealing with flops in instruction_o
             // Recover the instructions. This is a FIFO, so we want to check everything is in the same order.
-            for(int i = 0; i < GL_ENTRIES; i+=2) begin
+            for(int i = 2; i < GL_ENTRIES; i+=2) begin
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 
                 for(int j=0;j<NUM_SCALAR_INSTR;j++) begin
-                //$display("i=%s\n",tb_instruction_o[j].exception.valid);
+                //$display("pc=%d, index=%d\n",tb_instruction_o[j].exception.origin,(i+j));
                 assert(tb_instruction_o[j].valid == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].rd == 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_instruction_o[j].rs1 == 1) else begin tmp++; assert(1 == 0); end

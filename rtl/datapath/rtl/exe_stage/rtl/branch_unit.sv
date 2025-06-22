@@ -54,6 +54,7 @@ always_comb begin
         end
         JALR: begin
             // Jalr always puts a zero in the lower bit
+            
             target = (data_rs1 + instruction_i.instr.imm) & 64'hFFFFFFFFFFFFFFFE;
         end
         BLT, BLTU, BGE, BGEU, BEQ, BNE: begin

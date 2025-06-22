@@ -2,7 +2,7 @@
 
 # Define path to each library
 LIB_WORK = lib_module/
-LIB_SV_STD = /home/vsoria/intelFPGA_lite/19.1/modelsim_ase/linuxaloem/../sv_std
+LIB_SV_STD = /home/xipi/intelFPGA_lite/18.1/modelsim_ase/linuxaloem/../sv_std
 LIB_LIB_MODULE/ = lib_module/
 
 # Define path to each design unit
@@ -10,9 +10,8 @@ SV_STD__std = $(LIB_SV_STD)/_lib.qdb
 LIB_MODULE/__tb_regfile_sv_unit = $(LIB_LIB_MODULE/)/_lib.qdb
 LIB_MODULE/__tb_regfile = $(LIB_LIB_MODULE/)/_lib.qdb
 LIB_MODULE/__riscv_pkg = $(LIB_LIB_MODULE/)/_lib.qdb
-LIB_MODULE/__regfile_sv_unit = $(LIB_LIB_MODULE/)/_lib.qdb
 LIB_MODULE/__regfile = $(LIB_LIB_MODULE/)/_lib.qdb
-LIB_MODULE/__drac_pkg_sv_unit = $(LIB_LIB_MODULE/)/_lib.qdb
+LIB_MODULE/__fpuv_pkg = $(LIB_LIB_MODULE/)/_lib.qdb
 LIB_MODULE/__drac_pkg = $(LIB_LIB_MODULE/)/_lib.qdb
 VCOM = vcom
 VLOG = vlog
@@ -23,10 +22,10 @@ whole_library : $(LIB_LIB_MODULE/)/_lib.qdb
 
 $(LIB_LIB_MODULE/)/_lib.qdb : tb_regfile.sv colors.vh ../../../../../../includes/riscv_pkg.sv \
 		 ../../../../../../rtl/datapath/rtl/rr_stage/rtl/regfile.sv \
-		 ../../../../../../includes/drac_pkg.sv \
+		 ../../../../../../includes/fpuv_pkg.sv ../../../../../../includes/drac_pkg.sv \
 		$(SV_STD__std)
 	$(VLOG) -work lib_module/ +acc=rn +incdir+ \
-		 ../../../../../../includes/riscv_pkg.sv ../../../../../../includes/drac_pkg.sv \
-		 ../../../../../../rtl/datapath/rtl/rr_stage/rtl/regfile.sv \
+		 ../../../../../../includes/riscv_pkg.sv ../../../../../../includes/fpuv_pkg.sv \
+		 ../../../../../../includes/drac_pkg.sv ../../../../../../rtl/datapath/rtl/rr_stage/rtl/regfile.sv \
 		 tb_regfile.sv colors.vh
 

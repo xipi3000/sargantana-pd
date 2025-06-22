@@ -42,10 +42,10 @@ module tb_free_list();
     reg tb_clk_i;
     reg tb_rstn_i;
 
-    logic tb_read_head_S_i[NUM_SCALAR_INSTR];
+    logic [NUM_SCALAR_INSTR-1:0]tb_read_head_S_i;
     logic [1:0] tb_add_free_register_S_i[NUM_SCALAR_INSTR];
     logic [5:0][1:0] tb_free_register_S_i [NUM_SCALAR_INSTR];
-    logic [5:0] tb_new_register_S_o [NUM_SCALAR_INSTR];
+    phreg_t [NUM_SCALAR_INSTR-1:0]tb_new_register_S_o ;
     logic tb_empty_o;
     logic tb_do_checkpoint_i;
     logic tb_do_recover_i;
@@ -172,7 +172,7 @@ module tb_free_list();
                 assert(free_list_inst.head[0] == i)  else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.tail[0] == 5'b0) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.num_registers[0] == 32 - i) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_S_o == '{i + 32,i + 32+1}) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{i + 32+1,i + 32}) else begin tmp++; assert(1 == 0); end
             end
 
             tick(); // Tries to read but is empty
@@ -195,7 +195,7 @@ module tb_free_list();
             
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 0) else begin tmp++; assert(1 == 0); end
-            assert(tb_new_register_S_o == '{5'b10101,5'b10111}) else begin tmp++; assert(1 == 0); end
+            assert(tb_new_register_S_o == '{5'b10111,5'b10101}) else begin tmp++; assert(1 == 0); end
 
             tick();
             tb_read_head_S_i <= '{1'b0,1'b0};
@@ -298,7 +298,7 @@ module tb_free_list();
                 assert(free_list_inst.head[1] == i + 2)  else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.tail == 5'h2) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.num_registers[1] == 32 - i) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_S_o == '{i + 1,i+2}) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{i+2,i + 1}) else begin tmp++; assert(1 == 0); end
             end
 
             tb_read_head_S_i <= {1'b0,1'b0};

@@ -41,7 +41,7 @@ module control_unit
     input logic             debug_wr_valid_i,
 
 
-    output pipeline_ctrl_t  pipeline_ctrl_o,
+    output pipeline_ctrl_t_S  pipeline_ctrl_o,
     output pipeline_flush_t pipeline_flush_o,
     output cu_if_t          cu_if_o,
     output logic            invalidate_icache_o,
@@ -301,7 +301,7 @@ module control_unit
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;
-        end else if (ir_cu_i_Ss.full_iq[0] | ir_cu_i_Ss.full_iq[1]) begin
+        end else if (ir_cu_i_Ss.full_iq[0] || ir_cu_i_Ss.full_iq[1]) begin
             pipeline_ctrl_o.stall_if_1  = 1'b1;
             pipeline_ctrl_o.stall_if_2  = 1'b1;
             pipeline_ctrl_o.stall_id    = 1'b1;

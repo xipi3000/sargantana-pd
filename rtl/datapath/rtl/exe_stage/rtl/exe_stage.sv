@@ -324,7 +324,7 @@ always_comb begin
     end else if (div_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_DIV) begin
         exe_to_wb_o = div_to_scalar_wb;
         fp_to_wb_o      = 'h0;
-    end else if (alu_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_ALU) begin
+    end else if (alu_to_scalar_wb.valid & (from_rr_i.instr.unit == UNIT_ALU | from_rr_i.instr.unit == UNIT_SYSTEM) ) begin
         exe_to_wb_o = alu_to_scalar_wb;
         fp_to_wb_o      = 'h0;
     end else if (branch_to_scalar_wb.valid & from_rr_i.instr.unit == UNIT_BRANCH) begin

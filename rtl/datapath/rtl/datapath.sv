@@ -523,21 +523,21 @@ module datapath
         .empty_o        (is_iq_2_empty)
     );
 
-    assign stage_iq_ir_q_S ={stage_iq_ir_q_0[0],  stage_iq_ir_q_0[1] == 'h0 ?  stage_iq_ir_q_1[0] : stage_iq_ir_q_0[1]};
+    assign stage_iq_ir_q_S ={stage_iq_ir_q_0[1] == 'h0 ?  stage_iq_ir_q_1[0] : stage_iq_ir_q_0[1],stage_iq_ir_q_0[0]};
     // Free List
     free_list free_list_inst(
         .clk_i                  (clk_i),
         .rstn_i                 (rstn_i),
-        .read_head_S_i            ({stage_iq_ir_q_S[0].instr.regfile_we & stage_iq_ir_q_S[0].instr.valid & (stage_iq_ir_q_S[0].instr.rd != 'h0) & (~control_int_Ss.stall_ir[0]) & (~control_int_Ss.stall_iq[0]),      
-                                    stage_iq_ir_q_S[1].instr.regfile_we & stage_iq_ir_q_S[1].instr.valid & (stage_iq_ir_q_S[1].instr.rd != 'h0) & (~control_int_Ss.stall_ir[1]) & (~control_int_Ss.stall_iq[1])}),
-        .add_free_register_S_i    ({cu_ir_int.enable_commit_update_S[0],cu_ir_int.enable_commit_update_S[1]}),
+        .read_head_S_i            ({stage_iq_ir_q_S[1].instr.regfile_we & stage_iq_ir_q_S[1].instr.valid & (stage_iq_ir_q_S[1].instr.rd != 'h0) & (~control_int_Ss.stall_ir[1]) & (~control_int_Ss.stall_iq[1]),      
+                                    stage_iq_ir_q_S[0].instr.regfile_we & stage_iq_ir_q_S[0].instr.valid & (stage_iq_ir_q_S[0].instr.rd != 'h0) & (~control_int_Ss.stall_ir[0]) & (~control_int_Ss.stall_iq[0])}),
+        .add_free_register_S_i    ({cu_ir_int.enable_commit_update_S[1],cu_ir_int.enable_commit_update_S[0]}),
         .free_register_S_i        ({instruction_to_commit[1].old_prd, instruction_to_commit[0].old_prd}),
         .do_checkpoint_i        (cu_ir_int.do_checkpoint),
         .do_recover_i           (cu_ir_int.do_recover),
         .delete_checkpoint_i    (cu_ir_int.delete_checkpoint),
         .recover_checkpoint_i   (cu_ir_int.recover_checkpoint),
         .commit_roll_back_i     (cu_ir_int.recover_commit),
-        .new_register_S_o         (free_register_to_rename_S),
+        .new_register_S_o         ({free_register_to_rename_S}),
         .checkpoint_o           (checkpoint_free_list),
         .out_of_checkpoints_o   (out_of_checkpoints_free_list),
         .empty_o                (free_list_empty)
@@ -670,7 +670,7 @@ module datapath
         .flush_i(flush_int.flush_ir),
         //TODO: NOT SURE ABOUT THIS
         .load_i((!control_int_Ss.stall_ir[0] | !control_int_Ss.stall_ir[1]) ),
-        .input_i({stage_ir_rr_d_S,free_register_to_rename_S, fp_free_register_to_rename, cu_ir_int.do_checkpoint}),
+        .input_i({stage_ir_rr_d_S[1].instr,stage_ir_rr_d_S[0].instr,stage_ir_rr_d_S[1].ex,stage_ir_rr_d_S[0].ex,free_register_to_rename_S, fp_free_register_to_rename, cu_ir_int.do_checkpoint}),
         .output_o({stage_no_stall_rr_q_Ss.instr,stage_no_stall_rr_q_Ss.ex,stage_no_stall_rr_q_Ss.prd,stage_no_stall_rr_q_Ss.fprd,stage_no_stall_rr_q_Ss.checkpoint_done})
     );
 
@@ -686,7 +686,7 @@ module datapath
 
     // Syncronus Mux to decide between actual Rename or one cycle before Rename
     always @(posedge clk_i) begin
-        src_select_ir_rr_q <= !control_int_Ss.stall_ir | !control_int_Ss.stall_ir[1];
+        src_select_ir_rr_q <= !control_int_Ss.stall_ir[0] | !control_int_Ss.stall_ir[1];
     end
     always_comb begin
         for(int i=0; i< drac_pkg::NUM_SCALAR_INSTR; i++) begin
@@ -975,11 +975,7 @@ module datapath
 
         //snoop_exe_rdy1 = |snoop_exe_rs1;
         //snoop_exe_rdy2 = |snoop_exe_rs2;
-        for (int i=0; i<drac_pkg::NUM_SCALAR_INSTR; ++i) begin
-        exe_data_rs1[i] = snoop_exe_rs1[i] ? (snoop_exe_data_rs1_S[i]) : stage_rr_exe_q_Ss.data_rs1[i];
-        exe_data_rs2[i] = snoop_exe_rs2[i] ? (snoop_exe_data_rs2_S[i]) : stage_rr_exe_q_Ss.data_rs2[i];
-        
-        end
+
         snoop_exe_frdy1 = |snoop_exe_frs1;
         snoop_exe_frdy2 = |snoop_exe_frs2;
         snoop_exe_frdy3 = |snoop_exe_frs3;
@@ -990,10 +986,10 @@ module datapath
     end
 
     assign reg_to_exe_Ss.instr = stage_rr_exe_q_Ss.instr;
-    assign reg_to_exe_Ss.data_rs1[0] = (stage_rr_exe_q_Ss.instr[0].use_fs1) ? exe_data_frs1 : exe_data_rs1[0];
-    assign reg_to_exe_Ss.data_rs2[0] = (stage_rr_exe_q_Ss.instr[0].use_fs2) ? exe_data_frs2 : exe_data_rs2[0];
-    assign reg_to_exe_Ss.data_rs1[1] = (stage_rr_exe_q_Ss.instr[1].use_fs1) ? exe_data_frs1 : exe_data_rs1[1];
-    assign reg_to_exe_Ss.data_rs2[1] = (stage_rr_exe_q_Ss.instr[1].use_fs2) ? exe_data_frs2 : exe_data_rs2[1];
+    assign reg_to_exe_Ss.data_rs1[0] = (stage_rr_exe_q_Ss.instr[0].use_fs1) ? exe_data_frs1 : snoop_exe_rs1[0] ? (snoop_exe_data_rs1_S[0]) : stage_rr_exe_q_Ss.data_rs1[0];
+    assign reg_to_exe_Ss.data_rs2[0] = (stage_rr_exe_q_Ss.instr[0].use_fs2) ? exe_data_frs2 : snoop_exe_rs2[0] ? (snoop_exe_data_rs2_S[0]) : stage_rr_exe_q_Ss.data_rs2[0];
+    assign reg_to_exe_Ss.data_rs1[1] = (stage_rr_exe_q_Ss.instr[1].use_fs1) ? exe_data_frs1 : snoop_exe_rs1[1] ? (snoop_exe_data_rs1_S[1]) : stage_rr_exe_q_Ss.data_rs1[1];
+    assign reg_to_exe_Ss.data_rs2[1] = (stage_rr_exe_q_Ss.instr[1].use_fs2) ? exe_data_frs2 : snoop_exe_rs2[1] ? (snoop_exe_data_rs2_S[1]) : stage_rr_exe_q_Ss.data_rs2[1];
     assign reg_to_exe_Ss.data_rs3 = exe_data_frs3;
     
     assign reg_to_exe_Ss.prs1 = stage_rr_exe_q_Ss.prs1;
@@ -1139,22 +1135,16 @@ module datapath
         .input_i({exe_to_wb_scalar[0], exe_to_wb_scalar[1], exe_to_wb_fp[0]}),
         .output_o({wb_scalar[0], wb_scalar[1], wb_fp[0]})
     );
-    always_comb begin
-        for ( int i=drac_pkg::NUM_SCALAR_INSTR-1; i>=0; i--) begin
-            if(exe_if_branch_pred_int_S[i].is_branch_exe) begin
-                exe_if_branch_pred_int = exe_if_branch_pred_int_S[i];
-                correct_branch_pred = correct_branch_pred_S[i];
-            end
-        end
-    end
 
+    assign exe_if_branch_pred_int = exe_if_branch_pred_int_S[0];
+    assign   correct_branch_pred = correct_branch_pred_S[0];
 
 
     always_ff @(posedge clk_i, negedge rstn_i) begin
         if(!rstn_i) begin
             branch_addr_result_wb <=  40'h0040000000;
             correct_branch_pred_wb <=  1'b1;
-        end else if(!control_int_Ss.stall_exe[0] | !control_int_Ss.stall_exe[1]) begin
+        end else if(!control_int_Ss.stall_exe[0] || !control_int_Ss.stall_exe[1]) begin
             branch_addr_result_wb <=  exe_if_branch_pred_int.branch_addr_result_exe;
             correct_branch_pred_wb <=  correct_branch_pred;
         end else begin 

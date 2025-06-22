@@ -214,8 +214,8 @@ begin
         end
     end else begin
         tail <= tail + ({{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]});
-        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S}  * (valid_bit[head] * valid_bit[head+1]) ;
-        num  <= num + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]} - ({{num_bits_index-2{1'b0}}, read_enable_S} * (valid_bit[head] * valid_bit[head+1]));   
+        head <= head + {{num_bits_index-2{1'b0}}, read_enable_S}; // * (valid_bit[head] * valid_bit[head+1]) ;
+        num  <= num + {{num_bits_index-1{1'b0}},write_enable_S[0]}+ {{num_bits_index-1{1'b0}},write_enable_S[1]} - ({{num_bits_index-2{1'b0}}, read_enable_S}); //* (valid_bit[head] * valid_bit[head+1]));   
     end
 end
 
