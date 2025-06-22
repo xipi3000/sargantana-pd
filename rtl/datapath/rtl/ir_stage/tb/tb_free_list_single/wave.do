@@ -21,7 +21,8 @@ add wave -noupdate /tb_free_list/free_list_inst/version_head
 add wave -noupdate /tb_free_list/free_list_inst/version_tail
 add wave -noupdate /tb_free_list/free_list_inst/num_checkpoints
 add wave -noupdate /tb_free_list/free_list_inst/register_table
-add wave -noupdate /tb_free_list/free_list_inst/write_enable
+add wave -noupdate /tb_free_list/free_list_inst/write_enable_0_S
+add wave -noupdate /tb_free_list/free_list_inst/write_enable_1_S
 add wave -noupdate /tb_free_list/free_list_inst/read_enable
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {270 ns} 0}

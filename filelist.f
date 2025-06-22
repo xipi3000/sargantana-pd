@@ -37,6 +37,7 @@
 ./rtl/datapath/rtl/exe_stage/rtl/fpu/fpu_drac_wrapper.sv
 ./rtl/datapath/rtl/exe_stage/rtl/alu.sv
 ./rtl/datapath/rtl/exe_stage/rtl/exe_stage.sv
+./rtl/datapath/rtl/exe_stage/rtl/exe_stage_red.sv
 ./rtl/datapath/rtl/exe_stage/rtl/branch_unit.sv
 ./rtl/datapath/rtl/exe_stage/rtl/pending_fp_ops_queue.sv
 ./rtl/datapath/rtl/exe_stage/rtl/score_board_scalar.sv

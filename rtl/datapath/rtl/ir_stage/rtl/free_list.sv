@@ -24,9 +24,9 @@ module free_list
 (
     input wire             clk_i,               // Clock Singal
     input wire             rstn_i,              // Negated Reset Signal
-    input wire             read_head_i,         // Read head of the circular buffer
-    input wire [1:0]       add_free_register_i, // Add new free register
-    input phreg_t [1:0]    free_register_i,     // Register to be freed
+    input wire [NUM_SCALAR_INSTR-1:0]    read_head_S_i ,         // Read head of the circular buffer      
+    input wire [1:0]       add_free_register_S_i[NUM_SCALAR_INSTR], // Add new free register
+    input phreg_t [1:0]    free_register_S_i[NUM_SCALAR_INSTR],     // Register to be freed
 
     input wire             do_checkpoint_i,     // After renaming do a checkpoint
     input wire             do_recover_i,        // Recover a checkpoint
@@ -34,7 +34,7 @@ module free_list
     input checkpoint_ptr   recover_checkpoint_i,// Label of the checkpoint to recover or the checkpoint of the freed register
     input wire             commit_roll_back_i,  // Free on fly register because of exception
 
-    output phreg_t         new_register_o,      // First free register
+    output phreg_t      [NUM_SCALAR_INSTR-1:0]   new_register_S_o ,      // First free register
     output checkpoint_ptr  checkpoint_o,        // Label of the checkpoint done. Use in case of recovery.
     output logic           out_of_checkpoints_o,// Indicates if user is able to do more checkpoints.
     output logic           empty_o              // Free list is empty
@@ -61,10 +61,14 @@ logic [$clog2(NUM_ENTRIES_FREE_LIST):0] num_registers [0:NUM_CHECKPOINTS-1];
 logic [$clog2(NUM_CHECKPOINTS):0] num_checkpoints;
 
 // Determines if is gonna be read or writen
-logic write_enable_0;
-logic write_enable_1;
-logic read_enable;
+logic write_enable_0_S[NUM_SCALAR_INSTR];
+logic write_enable_1_S[NUM_SCALAR_INSTR];
+logic read_enable_S[NUM_SCALAR_INSTR];
 logic checkpoint_enable;
+
+
+
+
 
 // Internal signal to do checkpoints 
 // User can do checkpoints when there is at least one free copy of the free list
@@ -75,15 +79,18 @@ assign checkpoint_enable = do_checkpoint_i & (num_checkpoints < (NUM_CHECKPOINTS
 // Freed register should be written to all checkpoints
 // It cannot overflow the buffer. It cannot be done when recovering an old checkpoint.
 // It cannot free register 0
-assign write_enable_0 = (add_free_register_i[0]) & (free_register_i[0] != 5'h0) & (~commit_roll_back_i);
-assign write_enable_1 = (add_free_register_i[1]) & (free_register_i[1] != 5'h0) & (~commit_roll_back_i);
-
+always_comb begin
+    for(int i =0; i<NUM_SCALAR_INSTR; i++)begin
+        write_enable_0_S[i] = (add_free_register_S_i[i][0]) & (free_register_S_i[i][0] != 5'h0) & (~commit_roll_back_i);
+        write_enable_1_S[i] = (add_free_register_S_i[i][1]) & (free_register_S_i[i][1] != 5'h0) & (~commit_roll_back_i);
+        read_enable_S[i] = read_head_S_i[i] & ((num_registers[version_head] > 0) | write_enable_0_S[i] | write_enable_1_S[i]) & (~do_recover_i) & (~commit_roll_back_i);
+    end
+end
 // User can read the head of the buffer if there is any free register or 
 // in this cycle a new register is written
-assign read_enable = read_head_i & ((num_registers[version_head] > 0) | write_enable_0 | write_enable_1) & (~do_recover_i) & (~commit_roll_back_i);
-
 assign tail_plus_one = tail + 5'b00001;
-
+assign tail_plus_two = tail + 5'b00010;
+assign tail_plus_three = tail + 5'b00011;
 // FIFO Memory structure
 phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table;    // SRAM used to store the free registers. Read syncronous.
 (* keep="TRUE" *) (* mark_debug="TRUE" *) phreg_t [NUM_ENTRIES_FREE_LIST-1:0] register_table_reg;    // SRAM used to store the free registers. Read syncronous.
@@ -121,29 +128,88 @@ begin
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////// WRITES FREED REGISTER                                                                        /////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-        if (write_enable_0) begin
-            register_table[tail] <= free_register_i[0];
-            if (write_enable_1) begin
-                register_table[tail_plus_one] <= free_register_i[1];
+            if (write_enable_0_S[0]) begin 
+            //Write enable 0  of instr 0 [0,0]
+                register_table[tail] <= free_register_S_i[0][0];
+                if (write_enable_1_S[0]) begin 
+                //Write enable 1 of instr 0 [0,0][0,1]
+                    register_table[tail_plus_one] <= free_register_S_i[0][1];
+                    if (write_enable_0_S[1]) begin 
+                    //Write enable 0 of instr 1 [0,0][0,1][1,0]
+                        register_table[tail_plus_two] <= free_register_S_i[1][0];
+                        if (write_enable_1_S[1]) begin 
+                        //Write enable 1 of instr 1 [0,0][0,1][1,0][1,1]
+                            register_table[tail_plus_three] <= free_register_S_i[1][1];
+                        end
+                    end else begin 
+                    if (write_enable_1_S[1]) begin
+                    //Write enable 1 of instr 1 [0,0][0,1][1,1]
+                        register_table[tail_plus_two] <= free_register_S_i[1][1];
+                        end
+                    end
+                end else begin 
+                if (write_enable_0_S[1]) begin
+                //Write enable 0 of instr 1  [0,0][1,0]
+                    register_table[tail_plus_one] <= free_register_S_i[1][0];
+                    if (write_enable_1_S[1]) begin
+                    //Write enable 1 of instr 1 [0,0][1,0][1,1]
+                        register_table[tail_plus_two] <= free_register_S_i[1][1];
+                    end
+                end else begin
+                if (write_enable_1_S[1]) begin
+                    //Write enable 1 of instr 1 [0,0][1,1]
+                    register_table[tail_plus_one] <= free_register_S_i[1][1];
+                    end
+                end
+                end 
+            end else begin
+                if (write_enable_1_S[0]) begin 
+                    //[0,1]
+                    register_table[tail] <= free_register_S_i[0][1];
+                    if (write_enable_0_S[1]) begin
+                        //[0,1][1,0]
+                        register_table[tail_plus_one] <= free_register_S_i[1][0];
+                        if (write_enable_1_S[1]) begin
+                            //[0,1][1,0][1,1]
+                            register_table[tail_plus_two] <= free_register_S_i[1][1];
+                        end
+                    end else begin
+                    if (write_enable_1_S[1]) begin
+                        //[0,1][1,1]
+                        register_table[tail_plus_one] <= free_register_S_i[1][1];
+                        end
+                    end
+                end else begin
+                    if (write_enable_0_S[1]) begin
+                    //[1,0]
+                        register_table[tail] <= free_register_S_i[1][0];
+                        if (write_enable_1_S[1]) begin
+                        //[1,0][1,1]
+                            register_table[tail_plus_one] <= free_register_S_i[1][1];
+                        end
+                    end else begin
+                    if (write_enable_1_S[1]) begin
+                    //[1,1]
+                        register_table[tail] <= free_register_S_i[1][1];
+                        end
+                    end
+                end
             end
-        end else begin
-            if (write_enable_1) begin
-                register_table[tail] <= free_register_i[1];
-            end
-        end
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////// UPDATE CONTROL SIGNALS                                                                       /////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // When a register is freed increment tail
-        tail <= tail + write_enable_0 + write_enable_1;
+
+        tail <= tail + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
+
+        
+        //tail <= tail + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
         
         // Recompute number of free registers available.
         for(i = 0; i < NUM_CHECKPOINTS; i++) begin
-            num_registers[i]  <= num_registers[i]  + write_enable_0 + write_enable_1;
+            num_registers[i]  <= num_registers[i]  + write_enable_0_S[0] + write_enable_1_S[0] + write_enable_0_S[1] + write_enable_1_S[1];
         end
         
         checkpoint_o <= version_head;
@@ -173,10 +239,10 @@ begin
             // Recompute number of checkpoints
             num_checkpoints <= num_checkpoints + checkpoint_enable - delete_checkpoint_i;
             // When a free register is selected increment head
-            head[version_head] <= head[version_head] + read_enable;
+            head[version_head] <= head[version_head] + read_enable_S[0] + read_enable_S[1];
             // Recompute number of free registers available. Note that the register we are reading only counts for the 
             // checkpoint in which we are right now 
-            num_registers[version_head]  <= num_registers[version_head]  + write_enable_0 + write_enable_1 - read_enable;
+            num_registers[version_head]  <= num_registers[version_head]  + write_enable_0_S[0] + write_enable_1_S[0] - read_enable_S[0] + write_enable_0_S[1] + write_enable_1_S[1] - read_enable_S[1];
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //////// DO CHECKPOINT                                                                                /////////
@@ -187,17 +253,20 @@ begin
                 version_head <= version_head + checkpoint_enable;
                 version_head_tmp = version_head + 1'b1;
                 // Copy head position
-                head[version_head_tmp] <= head[version_head] + read_enable;
+                head[version_head_tmp] <= head[version_head] + read_enable_S[0] + read_enable_S[1];
                 // Copy number of free registers.
-                num_registers[version_head_tmp]  <= num_registers[version_head] + write_enable_0 + write_enable_1 - read_enable;
+                num_registers[version_head_tmp]  <= num_registers[version_head]+ write_enable_0_S[0] + write_enable_1_S[0] - read_enable_S[0] + write_enable_0_S[1] + write_enable_1_S[1] - read_enable_S[1];
             end
         end
     end
 end
 
+always_comb begin
 
-assign new_register_o = (~read_enable)? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0)) ? free_register_i[0] : ((num_registers[version_head] == 0) & (write_enable_1)) ? free_register_i[1] : register_table[head[version_head]];
-assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0 & ~write_enable_1;
+    new_register_S_o[0] = (~read_enable_S[0])? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0_S[0])) ? free_register_S_i[0][0] : ((num_registers[version_head] == 0) & (write_enable_1_S[0])) ? free_register_S_i[0][1] : register_table[head[version_head]];
+    new_register_S_o[1] = (~read_enable_S[1])? 'h0 : ((num_registers[version_head] == 0) & (write_enable_0_S[1])) ? free_register_S_i[1][0] : ((num_registers[version_head] == 0) & (write_enable_1_S[1])) ? free_register_S_i[1][1] : register_table[head[version_head]+read_enable_S[0]];
+    end
+assign empty_o = (num_registers[version_head] == 0) & ~write_enable_0_S[0] & ~write_enable_1_S[0] & ~write_enable_0_S[1] & ~write_enable_1_S[1];
 assign out_of_checkpoints_o = (num_checkpoints == (NUM_CHECKPOINTS - 1));
 
 `ifdef CHECK_RENAME

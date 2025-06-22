@@ -43,15 +43,15 @@ module tb_regfile();
 //-----------------------------
     reg     tb_clk_i;
 
-    reg     tb_write_enable_i;
-    reg_t   tb_write_addr_i;
-    bus64_t tb_write_data_i;
+    logic     [NUM_SCALAR_INSTR-1:0] tb_write_enable_i;
+    phreg_t   [NUM_SCALAR_INSTR-1:0] tb_write_addr_i;
+    bus64_t [NUM_SCALAR_INSTR-1:0] tb_write_data_i;
     // read ports input
-    reg_t   tb_read_addr1_i;
-    reg_t   tb_read_addr2_i;
+    phreg_t   [NUM_SCALAR_INSTR-1:0] tb_read_addr1_S_i ;
+    phreg_t   [NUM_SCALAR_INSTR-1:0] tb_read_addr2_S_i ;
     // read port output
-    bus64_t tb_read_data1_o;
-    bus64_t tb_read_data2_o;
+    bus64_t [NUM_SCALAR_INSTR-1:0] tb_read_data1_S_o ;
+    bus64_t [NUM_SCALAR_INSTR-1:0] tb_read_data2_S_o ;
 
 
 //-----------------------------
@@ -63,10 +63,10 @@ module tb_regfile();
         .write_enable_i(tb_write_enable_i),
         .write_addr_i(tb_write_addr_i),
         .write_data_i(tb_write_data_i),
-        .read_addr1_i(tb_read_addr1_i),
-        .read_addr2_i(tb_read_addr2_i),
-        .read_data1_o(tb_read_data1_o),
-        .read_data2_o(tb_read_data2_o)
+        .read_addr1_S_i(tb_read_addr1_S_i),
+        .read_addr2_S_i(tb_read_addr2_S_i),
+        .read_data1_S_o(tb_read_data1_S_o),
+        .read_data2_S_o(tb_read_data2_S_o)
     );
 
 //-----------------------------
@@ -88,8 +88,8 @@ module tb_regfile();
             tb_write_enable_i<='{default:0};
             tb_write_addr_i<='{default:0};
             tb_write_data_i<='{default:0};
-            tb_read_addr1_i<='{default:0};
-            tb_read_addr2_i<='{default:0};
+            tb_read_addr1_S_i<='{default:0};
+            tb_read_addr2_S_i<='{default:0};
             
             $display("Done");
             
@@ -121,21 +121,26 @@ module tb_regfile();
             //$display("*** tick");
             tmp = 0;
 	    #CLK_PERIOD;
-            tb_write_enable_i = 1'b1;
-            tb_write_addr_i = 5'b00001;
-            tb_write_data_i = 64'h01;
-            tb_read_addr1_i = 5'b00000;
-            tb_read_addr2_i = 5'b00000;
+            tb_write_enable_i = '{NUM_SCALAR_INSTR{1'b1}};
+            tb_write_addr_i[0] = 5'b00001;
+             tb_write_addr_i[1] = 5'b00010;
+            tb_write_data_i = '{NUM_SCALAR_INSTR{64'h01}};
+            tb_read_addr1_S_i = '{NUM_SCALAR_INSTR{5'b00000}};
+            tb_read_addr2_S_i = '{NUM_SCALAR_INSTR{5'b00000}};
             #CLK_PERIOD;
-            tb_write_enable_i = 1'b0;
-	    tb_write_addr_i = 5'b00000;
-	    assert(tb_read_data1_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(tb_read_data2_o == 0) else begin tmp++; assert(1 == 0); end
-	    tb_read_addr1_i = 5'b00001;
-	    tb_read_addr2_i = 5'b00001;
+            tb_write_enable_i = '{NUM_SCALAR_INSTR{1'b0}};
+	        tb_write_addr_i = '{NUM_SCALAR_INSTR{5'b00000}};
+            for(int i=0;i<NUM_SCALAR_INSTR;i++) begin
+            assert(tb_read_data1_S_o[i] == 0) else begin tmp++; assert(1 == 0); end
+            assert(tb_read_data2_S_o[i] == 0) else begin tmp++; assert(1 == 0); end
+            tb_read_addr1_S_i[i] = 5'b00001;
+            tb_read_addr2_S_i[i] = 5'b00001;
+            end
 	    #CLK_PERIOD;
-            assert(tb_read_data1_o == 64'h01) else begin tmp++; assert(1 == 0); end
-            assert(tb_read_data2_o == 64'h01) else begin tmp++; assert(1 == 0); end
+         for(int i=0;i<NUM_SCALAR_INSTR;i++) begin
+            assert(tb_read_data1_S_o[i] == 64'h01) else begin tmp++; assert(1 == 0); end
+            assert(tb_read_data2_S_o[i] == 64'h01) else begin tmp++; assert(1 == 0); end
+         end
         end
     endtask
 

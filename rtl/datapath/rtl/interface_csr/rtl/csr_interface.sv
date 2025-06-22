@@ -28,7 +28,7 @@ module csr_interface
     input  bus64_t          result_gl_i,
     input  reg_csr_addr_t   csr_addr_gl_i,
     input  gl_instruction_t [1:0] instruction_to_commit_i,  // Instruction to be Committed
-    input  logic            stall_exe_i,              // Exe Stage is Stalled
+    //input  logic            stall_exe_i,              // Exe Stage is Stalled
     input  logic            commit_store_or_amo_i,    // The Commit Instruction is AMO or STORE
     input  logic            mem_commit_stall_i,       // The Commit Instruction is Stalled at Mem Stage
     input  exception_t      exception_mem_commit_i,   // The Exception comming from AMO or STORE

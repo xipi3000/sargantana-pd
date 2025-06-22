@@ -2,11 +2,12 @@ onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /tb_graduation_list/tb_clk_i
 add wave -noupdate /tb_graduation_list/tb_rstn_i
-add wave -noupdate /tb_graduation_list/tb_instruction_i
+add wave -noupdate /tb_graduation_list/tb_instruction_S_i
 add wave -noupdate /tb_graduation_list/tb_instruction_o
 add wave -noupdate -position end sim:/tb_graduation_list/module_inst/*
 add wave -noupdate -position end sim:/tb_graduation_list/module_inst/entries
 add wave -noupdate -position end sim:/tb_graduation_list/module_inst/read_enable
+add wave -noupdate -position end sim:/tb_graduation_list/module_inst/write_enable_S
 add wave -noupdate -position end sim:/tb_graduation_list/module_inst/num
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {21 ns} 0}

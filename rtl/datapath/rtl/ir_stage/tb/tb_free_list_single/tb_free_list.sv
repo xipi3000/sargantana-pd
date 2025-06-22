@@ -165,14 +165,14 @@ module tb_free_list();
         output int tmp;
         begin
             tick();
-            tb_read_head_S_i <= {1'b1,1'b1};
-            for(int i=0; i<32; i+=2) begin            // Reads 32 free registers
+            tb_read_head_S_i <= {1'b1,1'b0};
+            for(int i=0; i<32; i+=1) begin            // Reads 32 free registers
                 tick();
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.head[0] == i)  else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.tail[0] == 5'b0) else begin tmp++; assert(1 == 0); end
                 assert(free_list_inst.num_registers[0] == 32 - i) else begin tmp++; assert(1 == 0); end
-                assert(tb_new_register_S_o == '{i + 32,i + 32+1}) else begin tmp++; assert(1 == 0); end
+                assert(tb_new_register_S_o == '{i + 32,0}) else begin tmp++; assert(1 == 0); end
             end
 
             tick(); // Tries to read but is empty
@@ -186,41 +186,41 @@ module tb_free_list();
             // Bypass from tail to head
 
             tb_free_register_S_i <= {5'b10101,5'b10111};
-            tb_add_free_register_S_i <= {1'b1,1'b1};
+            tb_add_free_register_S_i <= {1'b1,1'b0};
             tick();
 
             // Check Bypass
-            tb_read_head_S_i <={ 1'b1,1'b1};
+            tb_read_head_S_i <={ 1'b1,1'b0};
             tb_add_free_register_S_i <= {1'b0,1'b0};
             
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 0) else begin tmp++; assert(1 == 0); end
-            assert(tb_new_register_S_o == '{5'b10101,5'b10111}) else begin tmp++; assert(1 == 0); end
+            assert(tb_new_register_S_o == '{5'b10101,5'b00000}) else begin tmp++; assert(1 == 0); end
 
             tick();
             tb_read_head_S_i <= '{1'b0,1'b0};
             
-            assert(free_list_inst.head[0] == 5'h2) else begin tmp++; assert(1 == 0); end            
-            assert(free_list_inst.tail == 5'h2) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.head[0] == 5'h1) else begin tmp++; assert(1 == 0); end            
+            assert(free_list_inst.tail == 5'h1) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 0) else begin tmp++; assert(1 == 0); end
 
             tick();
 
-            for(int i=0; i<31; i+=2) begin            // Frees 32 registers
-                tb_free_register_S_i <= {i[5:0] + 1,i[5:0] + 2};
-                tb_add_free_register_S_i <= {1'b1,1'b1};
+            for(int i=0; i<32; i++) begin            // Frees 32 registers
+                tb_free_register_S_i <= {i[5:0] + 1,0};
+                tb_add_free_register_S_i <= {1'b1,1'b0};
 
                 tick();
                 tb_add_free_register_S_i <= {1'b0,1'b0};
 
                 tick();
                 assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-                assert(free_list_inst.head[0] == 2) else begin tmp++; assert(1 == 0); end
-                if (i > 26)
-                  assert(free_list_inst.tail ==  i[5:0]-28) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.head[0] == 1) else begin tmp++; assert(1 == 0); end
+                if (i > 29)
+                  assert(free_list_inst.tail ==  i[5:0]-30) else begin tmp++; assert(1 == 0); end
                 else
-                  assert(free_list_inst.tail ==  i[5:0] + 5'h4 ) else begin tmp++; assert(1 == 0); end
-                assert(free_list_inst.num_registers[0] == i + 2) else begin tmp++; assert(1 == 0); end
+                  assert(free_list_inst.tail ==  i[5:0] + 5'h2) else begin tmp++; assert(1 == 0); end
+                assert(free_list_inst.num_registers[0] == i + 1) else begin tmp++; assert(1 == 0); end
                 assert(tb_new_register_S_o == '{0,1'b0}) else begin tmp++; assert(1 == 0); end
             end
             
@@ -228,12 +228,12 @@ module tb_free_list();
             tb_read_head_S_i <={1'b0,1'b0};
 
             assert(tb_empty_o == 0) else begin tmp++; assert(1 == 0); end
-            assert(free_list_inst.head[0] == 2) else begin tmp++; assert(1 == 0); end
-            assert(free_list_inst.tail == 5'b10) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.head[0] == 1) else begin tmp++; assert(1 == 0); end
+            assert(free_list_inst.tail == 5'b01) else begin tmp++; assert(1 == 0); end
             assert(free_list_inst.num_registers[0] == 32) else begin tmp++; assert(1 == 0); end
     
-            for (int i=1; i<31; i++) begin
-                assert(free_list_inst.register_table[i+1] == i) else begin tmp++; assert(1 == 0); end
+            for (int i=1; i<32; i++) begin
+                assert(free_list_inst.register_table[i] == i) else begin tmp++; assert(1 == 0); end
             end
 
             assert(free_list_inst.version_head == 0)  else begin tmp++; assert(1 == 0); end

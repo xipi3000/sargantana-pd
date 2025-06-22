@@ -46,7 +46,7 @@ parameter PHISIC_MEM_LIMIT = 64'h07fffffffff;
 parameter PHISIC_MEM_LIMIT = 64'h0ffffffff; 
 `endif
 parameter BROM_SIZE = 20'b000010000000000000000000;
-
+parameter NUM_SCALAR_INSTR = 2;
 // RISCV
 //parameter OPCODE_WIDTH = 6;
 //parameter REG_WIDTH = 5;
@@ -598,7 +598,7 @@ typedef struct packed {
     logic do_recover;                      // Recover checkpoint
     checkpoint_ptr recover_checkpoint;     // Label of the checkpoint to recover   
     logic recover_commit;                  // Recover at Commit
-    logic [1:0] enable_commit_update;            // Enable update of Free List and Rename from commit
+    logic [1:0] enable_commit_update_S;            // Enable update of Free List and Rename from commit
     logic [1:0] fp_enable_commit_update;         // Enable update of FP Free List and Rename from commit
 } cu_ir_t;      // Control Unit to Rename
 
@@ -680,7 +680,19 @@ typedef struct packed {
     // whether insert in fetch from dec or commit
     jump_addr_fetch_t sel_addr_if;
 } pipeline_ctrl_t;  // Control signals of the pipeline
+typedef struct packed {
+    logic stall_if_1;       // Stop Fetch 1
+    logic stall_if_2;       // Stop Fetch 2
+    logic stall_id;         // Stop Decode
+    logic [1:0]stall_iq;         // Stop Instruction Queue
+    logic [1:0]stall_ir;         // Stop Rename
+    logic [1:0]stall_rr;         // Stop Read Register
+    logic [1:0] stall_exe;        // Stop Exe
+    logic [1:0] stall_commit;     // Stop Commit
 
+    // whether insert in fetch from dec or commit
+    jump_addr_fetch_t sel_addr_if;
+} pipeline_ctrl_t_S;  
 // Pipeline control
 typedef struct packed {
     logic flush_if;         // Flush Fetch
@@ -1003,5 +1015,67 @@ typedef struct packed {
     longint unsigned fflags_wr_valid;
 } commit_data_t;
 `endif
+
+typedef struct packed {
+    instr_entry_t [1:0] instr;                // Instruction
+    exception_t [1:0] ex;                     // Exceptions
+    phreg_t [1:0] prs1;                       // Physical register source 1
+    logic  [1:0] rdy1;                       // Ready register source 1
+    phreg_t [1:0] prs2;                       // Physical register source 2
+    logic  [1:0] rdy2;                       // Ready register source 2 
+    phreg_t fprs1;                      // FP Physical register source 1
+    logic   frdy1;                      // FP Ready register source 1
+    phreg_t fprs2;                      // FP Physical register source 2
+    logic   frdy2;                      // FP Ready register source 2
+    phreg_t fprs3;                      // FP Physical register source 3
+    logic   frdy3;                      // FP Ready register source 3    
+    phreg_t [1:0] prd;                        // Physical register destination
+    phreg_t [1:0] old_prd;                    // Old Physical register destination
+    phreg_t fprd;                       // Physical register destination
+    phreg_t old_fprd;                   // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch  
+} ir_rr_stage_t_S;
+
+typedef struct packed {
+    instr_entry_t [1:0] instr;                // Instruction
+    bus64_t [1:0] data_rs1;                   // Data operand 1
+    bus64_t [1:0] data_rs2;                   // Data operand 2
+    bus64_t data_rs3;                   // Data operand 3 FP
+    phreg_t [1:0] prs1;                       // Physical register source 1
+    logic   [1:0] rdy1;                       // Ready register source 1
+    phreg_t [1:0] prs2;                       // Physical register source 2
+    logic   [1:0] rdy2;                       // Ready register source 2
+    phreg_t fprs1;                       // Physical register source 1
+    logic   frdy1;                       // Ready register source 1
+    phreg_t fprs2;                       // Physical register source 2
+    logic   frdy2;                       // Ready register source 2
+    phreg_t fprs3;                       // Physical register source 2
+    logic   frdy3;                       // Ready register source 3
+    phreg_t [1:0] prd;                        // Physical register destination 
+    phreg_t [1:0] old_prd;                    // Old Physical register destination
+    phreg_t fprd;                        // Physical register destination
+    phreg_t old_fprd;                    // Old Physical register destination
+
+    logic checkpoint_done;              // It has a checkpoint
+    checkpoint_ptr chkp;                // Checkpoint of branch
+
+    gl_index_t gl_index;                // Graduation List entry
+} rr_exe_instr_t_S;       //  Read Regfile to Execution stage for arithmetic pipeline
+
+typedef struct packed {
+    logic [1:0] valid;                        // Valid instruction
+    logic [1:0] full_iq;                      // Instruction Queue full
+    logic out_of_checkpoints;           // Rename out of checkpoints
+    logic fp_out_of_checkpoints;        // FP Rename out of checkpoints
+    logic  empty_free_list;              // Free list out of registers
+    logic fp_empty_free_list;           // FP Free list out of registers
+    logic [1:0] is_branch;                    // Rename instruction is a branch
+} ir_cu_t_S;      // Rename to Control Unit
+
+
+
+
 
 endpackage
